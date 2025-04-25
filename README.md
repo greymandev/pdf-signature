@@ -1,97 +1,207 @@
-# PDF Signature Tool
+# AutoFirma PDF Signing Tools
 
-A Java application for automating PDF signing using AutoFirma digital signature software.
+Este proyecto contiene herramientas para automatizar la firma de archivos PDF utilizando AutoFirma (la herramienta oficial del gobierno español para firmas electrónicas) con un certificado PFX.
 
-## Features
+## Requisitos
 
-- Sign PDF files in batch mode from a directory
-- GUI interface for interactive use
-- Command line interface for automation
-- Support for visible and invisible signatures
-- Timestamp support
-- Certificate password protection
-- Detailed logging of operations
-- Customizable signature appearance
-- Cross-platform support (Windows, macOS, Linux)
+- AutoFirma instalado en el sistema ([Descarga oficial de AutoFirma](https://firmaelectronica.gob.es/Home/Descargas.html))
+- Un certificado válido en formato PFX (.pfx) o P12 (.p12)
+- Archivos PDF para firmar
 
-## Requirements
+## Versiones Disponibles
 
-- Java 8 or higher
-- [AutoFirma](https://firmaelectronica.gob.es/Home/Descargas.html) installed on your system
-- A digital certificate in PKCS#12 format (.pfx or .p12)
+### 1. Script Bash (para Linux/macOS)
 
-## Installation
+El script `auto_sign_pdf.sh` está diseñado para ser ejecutado en sistemas Unix/Linux/macOS.
 
-1. Download the latest release from the releases page
-2. Ensure AutoFirma is installed on your system
-3. Place your certificate file (.pfx or .p12) in a secure location
-4. Run the application using Java
+### 2. Script Batch (para Windows)
 
-## Usage
+El script `auto_sign_pdf.bat` está diseñado para ser ejecutado en la línea de comandos de Windows (CMD).
 
-### GUI Mode
+### 3. Script PowerShell (para Windows)
 
-To start the application in GUI mode, simply run the JAR file without any arguments:
+El script `auto_sign_pdf.ps1` utiliza PowerShell para un mayor control y funcionalidad en sistemas Windows.
 
-```
-java -jar pdf-signature.jar
+### 4. Aplicación Java
+
+La aplicación `PDFSignerApp.java` proporciona tanto una interfaz gráfica como una interfaz de línea de comandos para la firma de documentos PDF. [Ver documentación detallada](README-PDFSignerApp.MD).
+
+## Uso
+
+### Script Bash (Linux/macOS)
+
+```bash
+./auto_sign_pdf.sh -i <directorio_entrada> -o <directorio_salida> -c <archivo_certificado> -p <contraseña> [opciones]
 ```
 
-Follow the on-screen prompts to:
-1. Select input directory containing PDF files
-2. Select output directory for signed PDFs
-3. Select your certificate file
-4. Enter your certificate password
-5. Configure signing options (location, reason, visibility)
-
-### Command Line Mode
-
-For batch processing or automation, use the command line interface:
-
-```
-java -jar pdf-signature.jar [OPTIONS]
+Ejemplo:
+```bash
+./auto_sign_pdf.sh -i ./pdfs -o ./firmados -c ./certificado.pfx -p micontraseña -l "Madrid" -r "Validación de documento" -v
 ```
 
-Options:
-- `-i, --input-dir`: Input directory containing PDF files (required)
-- `-o, --output-dir`: Output directory for signed PDFs (required)
-- `-c, --cert`: Path to the PFX certificate file (required)
-- `-p, --password`: Password for the PFX certificate (required)
-- `-l, --location`: Location for signature (default: Madrid)
-- `-r, --reason`: Reason for signature (default: Document validation)
-- `-v, --visible`: Make signature visible (default: false)
-- `-t, --timestamp`: Add timestamp to signature (default: false)
-- `-h, --help`: Display help message
+### Script Batch (Windows CMD)
 
-Example:
 ```
-java -jar pdf-signature.jar -i ./pdfs -o ./signed_pdfs -c ./certificate.pfx -p mypassword -l "Barcelona" -r "Invoice approval" -v
+auto_sign_pdf.bat -i <directorio_entrada> -o <directorio_salida> -c <archivo_certificado> -p <contraseña> [opciones]
 ```
 
-## Building from Source
+Ejemplo:
+```
+auto_sign_pdf.bat -i .\pdfs -o .\firmados -c .\certificado.pfx -p micontraseña -l "Madrid" -r "Validación de documento" -v
+```
 
-1. Clone this repository
-2. Build using your favorite Java IDE or with javac:
+### Script PowerShell (Windows)
+
+```powershell
+.\auto_sign_pdf.ps1 -InputDir <directorio_entrada> -OutputDir <directorio_salida> -CertFile <archivo_certificado> -Password <contraseña> [opciones]
+```
+
+Ejemplo:
+```powershell
+.\auto_sign_pdf.ps1 -InputDir .\pdfs -OutputDir .\firmados -CertFile .\certificado.pfx -Password micontraseña -Location "Madrid" -Reason "Validación de documento" -Visible
+```
+
+### Aplicación Java
+
+Modo GUI (interfaz gráfica):
+```bash
+java -jar PDFSignerApp.jar
+```
+
+Modo línea de comandos:
+```bash
+java -jar PDFSignerApp.jar -i <directorio_entrada> -o <directorio_salida> -c <archivo_certificado> -p <contraseña> [opciones]
+```
+
+## Opciones
+
+Todas las herramientas aceptan las siguientes opciones:
+
+| Opción (Bash/Batch) | Opción (PowerShell) | Opción (Java) | Descripción | Requerido | Valor por defecto |
+|---------------------|---------------------|---------------|-------------|-----------|-------------------|
+| `-i, --input-dir` | `-InputDir` | `-i, --input-dir` | Directorio de entrada con archivos PDF | Sí | - |
+| `-o, --output-dir` | `-OutputDir` | `-o, --output-dir` | Directorio de salida para PDFs firmados | Sí | - |
+| `-c, --cert` | `-CertFile` | `-c, --cert` | Ruta al archivo de certificado PFX | Sí | - |
+| `-p, --password` | `-Password` | `-p, --password` | Contraseña del certificado PFX | Sí | - |
+| `-l, --location` | `-Location` | `-l, --location` | Ubicación para la firma | No | Madrid |
+| `-r, --reason` | `-Reason` | `-r, --reason` | Razón de la firma | No | Document validation |
+| `-v, --visible` | `-Visible` | `-v, --visible` | Hacer la firma visible | No | false |
+| `-t, --timestamp` | `-Timestamp` | `-t, --timestamp` | Añadir sello de tiempo a la firma | No | false |
+| `-h, --help` | `-?` | `-h, --help` | Mostrar mensaje de ayuda | No | - |
+
+## Configuración de Firma Visible
+
+Cuando se utiliza la opción para hacer la firma visible (`-v`/`--visible`/`-Visible`), las herramientas crean automáticamente un archivo de configuración temporal con los siguientes parámetros por defecto:
+
+- Posición en la página: X=50, Y=50
+- Tamaño: Ancho=200, Alto=100
+- Página: 1
+- Tamaño de fuente: 9
+- Color de fuente: negro
+- Texto: "Firmado por [NAME] el día [DATE] Certificado [ISSUER]"
+
+## Características
+
+- Procesamiento por lotes de múltiples archivos PDF
+- Integración nativa con AutoFirma
+- Soporte para firmas visibles e invisibles
+- Registro detallado del proceso
+- Sellos de tiempo opcional
+- Personalización de ubicación y razón de firma
+- Interfaz gráfica (versión Java)
+- Compatible con Windows, macOS y Linux
+
+## Solución de Problemas
+
+Si encuentra problemas al ejecutar las herramientas, verifique lo siguiente:
+
+1. AutoFirma está correctamente instalado y accesible
+2. El certificado PFX es válido y la contraseña es correcta
+3. Tiene permisos de lectura/escritura en los directorios de entrada/salida
+4. Los archivos PDF no están dañados o protegidos con contraseña
+
+### Soluciones comunes:
+
+- **AutoFirma no encontrado**: Asegúrese de que AutoFirma esté instalado y en una ubicación estándar o en su PATH
+- **Error de certificado**: Verifique que el formato del certificado sea PFX/P12 y que la contraseña sea correcta
+- **Permisos denegados**: Ejecute los scripts con privilegios de administrador si es necesario
+
+## Notas para Desarrolladores
+
+Para modificar las herramientas o contribuir al proyecto:
+
+1. Clone el repositorio
+2. Realice sus cambios
+3. Pruebe los cambios con diferentes configuraciones
+4. Envíe un pull request con una descripción clara de sus modificaciones
+
+## Documentación Adicional
+
+- [Documentación detallada de PDFSignerApp](README-PDFSignerApp.MD)
+- [Sitio oficial de AutoFirma](https://firmaelectronica.gob.es/Home/Ciudadanos/Aplicaciones-Firma.html)
+
+# PDF Signer Test Suite
+
+Este proyecto contiene un conjunto de pruebas unitarias para validar la aplicación PDFSignerApp, que automatiza la firma de documentos PDF con AutoFirma.
+
+## Estructura de las pruebas
+
+Las pruebas unitarias verifican los siguientes aspectos de la aplicación:
+
+1. **Procesamiento de argumentos**: Verifica que los argumentos de línea de comandos se procesen correctamente.
+2. **Validación de rutas**: Comprueba que la validación de rutas de archivos y directorios funcione adecuadamente.
+3. **Generación de archivos de configuración**: Verifica la correcta creación de archivos de configuración para firmas visibles.
+4. **Detección de AutoFirma**: Comprueba que la aplicación pueda detectar el ejecutable de AutoFirma.
+5. **Simulación de integración**: Simula el proceso de firma sin ejecutar realmente AutoFirma.
+
+## Requisitos
+
+- Java 8 o superior
+- JUnit 4.13.2 (incluido a través de Gradle)
+- Gradle (opcional, se puede usar el wrapper incluido)
+
+## Cómo ejecutar las pruebas
+
+### En Windows
+
+1. Ejecuta el script `run_tests.bat` haciendo doble clic en él o desde la línea de comandos:
    ```
-   javac PDFSignerApp.java
-   ```
-3. Run the compiled application:
-   ```
-   java PDFSignerApp
+   run_tests.bat
    ```
 
-## Shell Script Version
+### En Linux/macOS
 
-For users who prefer a shell script instead of Java, a `auto_sign_pdf.sh` script is included that provides similar functionality using direct calls to AutoFirma.
+1. Asegúrate de que el script tenga permisos de ejecución:
+   ```
+   chmod +x run_tests.sh
+   ```
 
-## License
+2. Ejecuta el script:
+   ```
+   ./run_tests.sh
+   ```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Manual con Gradle
 
-## Troubleshooting
+Si prefieres ejecutar las pruebas manualmente:
 
-- Make sure AutoFirma is properly installed and accessible in your PATH
-- For visible signatures, ensure you have appropriate permissions to modify the PDF
-- Check that your certificate is valid and the password is correct
-- If signing fails, check AutoFirma logs for more detailed error information
-- Some PDFs may be protected against modifications - these cannot be signed
+```
+gradle clean test
+```
+
+O con el wrapper:
+
+```
+./gradlew clean test    # En Linux/macOS
+gradlew.bat clean test  # En Windows
+```
+
+## Resultados de las pruebas
+
+Los resultados detallados de las pruebas se pueden encontrar en `build/reports/tests/test/index.html` después de ejecutar las pruebas.
+
+## Notas importantes
+
+- Estas pruebas se ejecutan sin necesidad de tener AutoFirma instalado, ya que utilizan reflection y simulación para probar la mayor parte de la funcionalidad.
+- El test `testFindAutoFirmaExecutable` podría fallar si AutoFirma no está instalado en el sistema, lo cual es esperado.
+- Para una validación completa en un entorno de producción, se recomienda complementar estas pruebas unitarias con pruebas de integración utilizando una instalación real de AutoFirma.
