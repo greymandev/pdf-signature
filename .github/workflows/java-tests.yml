@@ -31,8 +31,8 @@ jobs:
         fi
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       if: always()
       with:
         name: test-results
-        path: build/reports/tests/ 
+        path: build/reports/tests/
