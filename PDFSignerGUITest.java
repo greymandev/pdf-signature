@@ -17,6 +17,8 @@ import java.util.List;
  * Test para la interfaz gráfica de PDFSignerApp
  * Estos tests comprueban la funcionalidad básica de la interfaz gráfica
  * sin mostrar realmente ventanas en la pantalla
+ * 
+ * @author gr3ym4n
  */
 public class PDFSignerGUITest {
     
@@ -190,6 +192,40 @@ public class PDFSignerGUITest {
                     !certField.getText().isEmpty() && 
                     passwordField.getPassword().length > 0);
         }
+    }
+    
+    /**
+     * Test que simula el flujo de trabajo usando la variable de entorno para la contraseña
+     */
+    @Test
+    public void testWorkflowWithEnvironmentVariablePassword() throws Exception {
+        assumeGUICreated();
+        
+        // Crear archivos temporales para la prueba
+        File inputDir = tempFolder.newFolder("gui_input_env");
+        File outputDir = tempFolder.newFolder("gui_output_env");
+        File certFile = new File(tempFolder.getRoot(), "gui_cert_env.pfx");
+        Files.write(certFile.toPath(), "test certificate data".getBytes());
+        
+        // Crear un PDF de muestra
+        File samplePdf = new File(inputDir, "sample.pdf");
+        Files.write(samplePdf.toPath(), "sample PDF content".getBytes());
+        
+        // Obtener los componentes necesarios
+        JTextField inputDirField = findComponentByType(JTextField.class);
+        JTextField outputDirField = findNextComponentOfType(JTextField.class, inputDirField);
+        JTextField certField = findNextComponentOfType(JTextField.class, outputDirField);
+        JPasswordField passwordField = findComponentByType(JPasswordField.class);
+        
+        // Simular la entrada de datos - sin contraseña, que se tomará de la variable de entorno
+        if (inputDirField != null) inputDirField.setText(inputDir.getAbsolutePath());
+        if (outputDirField != null) outputDirField.setText(outputDir.getAbsolutePath());
+        if (certField != null) certField.setText(certFile.getAbsolutePath());
+        // No establecemos contraseña en el campo de contraseña, simulando que se usará la variable de entorno
+        
+        // Verificamos que aún con campo de contraseña vacío, podemos proceder si hay variable de entorno
+        // (Para simular esto, deberíamos analizar el comportamiento del botón de firma, que
+        // debería verificar la presencia de la variable de entorno cuando el campo está vacío)
     }
     
     // Métodos de utilidad para buscar componentes

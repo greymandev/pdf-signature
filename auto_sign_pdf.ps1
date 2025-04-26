@@ -4,9 +4,13 @@
 # This script automates PDF signing using AutoFirma (the Spanish government's 
 # electronic signature tool) using a PFX certificate.
 # 
-# Usage: .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file> -Password <password>
+# Usage: .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file>
+#        .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file> -Password <password>
+#        .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file> -PasswordEnv PDF_CERT_PASSWORD
+#        .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file> -PasswordFile <password_file>
+#        .\auto_sign_pdf.ps1 -InputDir <input_dir> -OutputDir <output_dir> -CertFile <cert_file> -PromptPassword
 #
-# Author: AI Assistant
+# Author: gr3ym4n
 # ============================================================
 
 [CmdletBinding()]
@@ -20,8 +24,17 @@ param (
     [Parameter(Mandatory=$true, Position=2, HelpMessage="Path to the PFX certificate file")]
     [string]$CertFile,
     
-    [Parameter(Mandatory=$true, Position=3, HelpMessage="Password for the PFX certificate")]
+    [Parameter(Mandatory=$false, Position=3, HelpMessage="Password for the PFX certificate (not recommended, use env var instead)")]
     [string]$Password,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Environment variable containing the password (default: PDF_CERT_PASSWORD)")]
+    [string]$PasswordEnv = "PDF_CERT_PASSWORD",
+    
+    [Parameter(Mandatory=$false, HelpMessage="File containing the password (only first line is read)")]
+    [string]$PasswordFile,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Prompt for password (more secure)")]
+    [switch]$PromptPassword,
     
     [Parameter(Mandatory=$false, HelpMessage="Location for signature (default: Madrid)")]
     [string]$Location = "Madrid",
@@ -35,6 +48,54 @@ param (
     [Parameter(Mandatory=$false, HelpMessage="Add timestamp to signature")]
     [switch]$Timestamp
 )
+
+# First check if PDF_CERT_PASSWORD environment variable is set (default method)
+if ([string]::IsNullOrEmpty($Password) -and [Environment]::GetEnvironmentVariable("PDF_CERT_PASSWORD") -ne $null) {
+    $Password = [Environment]::GetEnvironmentVariable("PDF_CERT_PASSWORD")
+}
+
+# Get password from environment variable if specified
+if ([string]::IsNullOrEmpty($Password) -and ![string]::IsNullOrEmpty($PasswordEnv)) {
+    $Password = [Environment]::GetEnvironmentVariable($PasswordEnv)
+    if ([string]::IsNullOrEmpty($Password)) {
+        Write-Error "Environment variable $PasswordEnv not set or empty"
+        exit 1
+    }
+}
+
+# Get password from file if specified
+if ([string]::IsNullOrEmpty($Password) -and ![string]::IsNullOrEmpty($PasswordFile)) {
+    if (-not (Test-Path $PasswordFile)) {
+        Write-Error "Password file does not exist: $PasswordFile"
+        exit 1
+    }
+    $Password = Get-Content $PasswordFile -TotalCount 1
+    if ([string]::IsNullOrEmpty($Password)) {
+        Write-Error "Password file is empty"
+        exit 1
+    }
+}
+
+# Prompt for password if requested
+if ([string]::IsNullOrEmpty($Password) -and $PromptPassword) {
+    $SecurePassword = Read-Host -Prompt "Enter certificate password" -AsSecureString
+    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+    try {
+        $Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+    } finally {
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+    }
+    if ([string]::IsNullOrEmpty($Password)) {
+        Write-Error "Password cannot be empty"
+        exit 1
+    }
+}
+
+# Validate that password is provided
+if ([string]::IsNullOrEmpty($Password)) {
+    Write-Error "Password must be provided directly, through an environment variable, from a file, or via prompt"
+    exit 1
+}
 
 # Function to log messages with colors
 function Write-Log {

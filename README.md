@@ -205,3 +205,132 @@ Los resultados detallados de las pruebas se pueden encontrar en `build/reports/t
 - Estas pruebas se ejecutan sin necesidad de tener AutoFirma instalado, ya que utilizan reflection y simulación para probar la mayor parte de la funcionalidad.
 - El test `testFindAutoFirmaExecutable` podría fallar si AutoFirma no está instalado en el sistema, lo cual es esperado.
 - Para una validación completa en un entorno de producción, se recomienda complementar estas pruebas unitarias con pruebas de integración utilizando una instalación real de AutoFirma.
+
+# PDF-Signature
+
+Una aplicación en Java para firmar documentos PDF usando certificados digitales a través de AutoFirma.
+
+## Uso seguro de contraseñas
+
+Para mejorar la seguridad, esta aplicación permite varias formas de proporcionar la contraseña del certificado sin exponerla en la línea de comandos:
+
+### Uso de variables de entorno (Método recomendado)
+
+La forma más segura y recomendada es usar la variable de entorno `PDF_CERT_PASSWORD`. La aplicación automáticamente detectará esta variable cuando esté disponible.
+
+#### En Windows (CMD)
+
+```cmd
+:: Establecer la variable de entorno
+set PDF_CERT_PASSWORD=tu_contraseña_segura
+
+:: Ejecutar el script sin necesidad de especificar la contraseña
+auto_sign_pdf.bat -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx
+```
+
+#### En Windows (PowerShell)
+
+```powershell
+# Establecer la variable de entorno
+$Env:PDF_CERT_PASSWORD = "tu_contraseña_segura"
+
+# Ejecutar el script sin necesidad de especificar la contraseña
+.\auto_sign_pdf.ps1 -InputDir ./input_pdfs -OutputDir ./signed_pdfs -CertFile ./certificate.pfx
+```
+
+#### En macOS y Linux
+
+```bash
+# Establecer la variable de entorno
+export PDF_CERT_PASSWORD='tu_contraseña_segura'
+
+# Ejecutar el script sin necesidad de especificar la contraseña
+./auto_sign_pdf.sh -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx
+```
+
+Para evitar que la contraseña quede registrada en el historial de comandos:
+
+```bash
+# Un espacio antes del comando evita que se guarde en el historial en la mayoría de configuraciones
+ export PDF_CERT_PASSWORD='tu_contraseña_segura'
+```
+
+#### Ejecutar la aplicación Java
+
+```bash
+# Establecer la variable de entorno
+export PDF_CERT_PASSWORD='tu_contraseña_segura'
+
+# Ejecutar la aplicación Java sin especificar la contraseña
+java -jar pdf-signer.jar --input-dir ./input_pdfs --output-dir ./signed_pdfs --cert ./certificate.pfx
+```
+
+### Métodos alternativos para proporcionar la contraseña
+
+La aplicación también soporta estos métodos de autenticación:
+
+1. **Solicitud interactiva de contraseña**:
+   ```bash
+   ./auto_sign_pdf.sh -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx --prompt-password
+   ```
+
+2. **Archivo de contraseña**:
+   ```bash
+   # Crear un archivo con permisos restrictivos
+   echo 'tu_contraseña_segura' > password.txt
+   chmod 600 password.txt
+
+   # Usar el archivo para la autenticación
+   ./auto_sign_pdf.sh -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx --password-file password.txt
+   ```
+
+### Integración con gestores de credenciales del sistema
+
+#### En Linux (usando secretarios de GNOME)
+
+```bash
+# Guardar la contraseña en el llavero (solo una vez)
+secret-tool store --label="PDF Signer Certificate" application pdf-signer certificate mycert
+
+# Recuperar y usar para la autenticación
+PASSWORD=$(secret-tool lookup application pdf-signer certificate mycert)
+export PDF_CERT_PASSWORD="$PASSWORD"
+./auto_sign_pdf.sh -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx
+```
+
+#### En macOS (usando Keychain)
+
+```bash
+# Guardar la contraseña en Keychain (solo una vez)
+security add-generic-password -a $USER -s "pdf-signer-cert" -w "tu_contraseña_segura"
+
+# Recuperar y usar para la autenticación
+PASSWORD=$(security find-generic-password -a $USER -s "pdf-signer-cert" -w)
+export PDF_CERT_PASSWORD="$PASSWORD"
+./auto_sign_pdf.sh -i ./input_pdfs -o ./signed_pdfs -c ./certificate.pfx
+```
+
+#### En Windows (usando Credential Manager)
+
+```powershell
+# Guardar la contraseña en Credential Manager (solo una vez)
+cmdkey /generic:PDF-Signer /user:CertificatePassword /pass:"tu_contraseña_segura"
+
+# Recuperar y usar la contraseña guardada (método simplificado)
+$Password = (cmdkey /generic:PDF-Signer | Where-Object {$_ -like "*contraseña*"}) -replace ".*: ", ""
+$Env:PDF_CERT_PASSWORD = $Password
+.\auto_sign_pdf.ps1 -InputDir ./input_pdfs -OutputDir ./signed_pdfs -CertFile ./certificate.pfx
+```
+
+## Recomendaciones de seguridad
+
+1. No pases contraseñas directamente como argumentos en la línea de comandos (visible en `ps` y queda en el historial)
+2. Limpia las variables de entorno cuando termines:
+   ```bash
+   unset PDF_CERT_PASSWORD  # En Linux/macOS
+   ```
+   ```powershell
+   $Env:PDF_CERT_PASSWORD = $null  # En PowerShell
+   ```
+3. Usa gestores de credenciales del sistema para mayor seguridad
+4. Si usas archivos de contraseña, aplica permisos restrictivos y elimínalos después de usarlos

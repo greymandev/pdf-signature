@@ -6,9 +6,11 @@
 # This script automates PDF signing using AutoFirma (the Spanish government's 
 # electronic signature tool) using a PFX certificate.
 # 
-# Usage: ./auto_sign_pdf.sh -i <input_dir> -o <output_dir> -c <cert_file> -p <password>
+# Usage: ./auto_sign_pdf.sh -i <input_dir> -o <output_dir> -c <cert_file>
+#        ./auto_sign_pdf.sh -i <input_dir> -o <output_dir> -c <cert_file> -p <password>
+#        ./auto_sign_pdf.sh -i <input_dir> -o <output_dir> -c <cert_file> --password-env PDF_CERT_PASSWORD
 #
-# Author: AI Assistant
+# Author: gr3ym4n
 # ============================================================
 
 # Default values
@@ -30,22 +32,27 @@ NC='\033[0m' # No Color
 
 # Function to display help message
 show_help() {
-    echo "Usage: $0 [OPTIONS]"
-    echo "Automatically sign PDF files using AutoFirma"
+    echo "AutoFirma PDF Signing Script for Unix/Linux"
+    echo ""
+    echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
+    echo "  -h, --help           Show this help message"
     echo "  -i, --input-dir      Input directory containing PDF files (required)"
     echo "  -o, --output-dir     Output directory for signed PDFs (required)"
     echo "  -c, --cert           Path to the PFX certificate file (required)"
-    echo "  -p, --password       Password for the PFX certificate (required)"
+    echo "  -p, --password       Password for the PFX certificate (not recommended, use env var instead)"
+    echo "  --password-env       Environment variable containing the password (default: PDF_CERT_PASSWORD)"
+    echo "  --password-file      File containing the password (only first line is read)"
+    echo "  --prompt-password    Prompt for password (more secure)"
     echo "  -l, --location       Location for signature (default: Madrid)"
     echo "  -r, --reason         Reason for signature (default: Document validation)"
-    echo "  -v, --visible        Make signature visible (default: false)"
-    echo "  -t, --timestamp      Add timestamp to signature (default: false)"
-    echo "  -h, --help           Display this help message"
+    echo "  -v, --visible        Make signature visible"
+    echo "  -t, --timestamp      Add timestamp to signature"
     echo ""
-    echo "Example:"
-    echo "  $0 -i ./pdfs -o ./signed_pdfs -c ./certificate.pfx -p mypassword -l \"Barcelona\" -r \"Invoice approval\" -v"
+    echo "Environment variables:"
+    echo "  PDF_CERT_PASSWORD    Certificate password (preferred method)"
+    echo ""
     exit 0
 }
 
@@ -65,6 +72,11 @@ log() {
     
     echo -e "${color}[$timestamp] [$level] $message${NC}"
 }
+
+# Check if PDF_CERT_PASSWORD environment variable is set (default method)
+if [ -n "$PDF_CERT_PASSWORD" ]; then
+    PASSWORD="$PDF_CERT_PASSWORD"
+fi
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -87,6 +99,38 @@ while [[ $# -gt 0 ]]; do
         -p|--password)
             PASSWORD="$2"
             shift 2
+            ;;
+        --password-env)
+            ENV_VAR="$2"
+            PASSWORD="${!ENV_VAR}"
+            if [ -z "$PASSWORD" ]; then
+                log "ERROR" "Environment variable $ENV_VAR not set or empty"
+                exit 1
+            fi
+            shift 2
+            ;;
+        --password-file)
+            PASSWORD_FILE="$2"
+            if [ ! -f "$PASSWORD_FILE" ]; then
+                log "ERROR" "Password file does not exist: $PASSWORD_FILE"
+                exit 1
+            fi
+            PASSWORD=$(head -n 1 "$PASSWORD_FILE")
+            if [ -z "$PASSWORD" ]; then
+                log "ERROR" "Password file is empty"
+                exit 1
+            fi
+            shift 2
+            ;;
+        --prompt-password)
+            # Read password securely
+            read -s -p "Enter certificate password: " PASSWORD
+            echo # Add newline after password input
+            if [ -z "$PASSWORD" ]; then
+                log "ERROR" "Password cannot be empty"
+                exit 1
+            fi
+            shift
             ;;
         -l|--location)
             LOCATION="$2"
@@ -128,7 +172,7 @@ if [ -z "$CERT_FILE" ]; then
 fi
 
 if [ -z "$PASSWORD" ]; then
-    log "ERROR" "Certificate password is required (-p, --password)"
+    log "ERROR" "Certificate password is required. Set PDF_CERT_PASSWORD environment variable or use one of the password options."
     exit 1
 fi
 

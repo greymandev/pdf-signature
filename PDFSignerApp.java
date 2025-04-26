@@ -16,6 +16,8 @@ import java.awt.event.ActionListener;
 
 /**
  * PDFSignerApp - A Java application for automating PDF signing with AutoFirma
+ * 
+ * @author gr3ym4n
  */
 public class PDFSignerApp {
     // Default values
@@ -82,6 +84,12 @@ public class PDFSignerApp {
         boolean visible = DEFAULT_VISIBLE;
         boolean timestamp = DEFAULT_TIMESTAMP;
 
+        // Check if password is provided via the PDF_CERT_PASSWORD environment variable (default)
+        String envPassword = System.getenv("PDF_CERT_PASSWORD");
+        if (envPassword != null && !envPassword.isEmpty()) {
+            password = envPassword;
+        }
+
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "-i":
@@ -99,6 +107,46 @@ public class PDFSignerApp {
                 case "-p":
                 case "--password":
                     if (i + 1 < args.length) password = args[++i];
+                    break;
+                case "--password-env":
+                    if (i + 1 < args.length) {
+                        String envVar = args[++i];
+                        password = System.getenv(envVar);
+                        if (password == null || password.isEmpty()) {
+                            throw new IllegalArgumentException("Environment variable " + envVar + " not set or empty");
+                        }
+                    }
+                    break;
+                case "--password-file":
+                    if (i + 1 < args.length) {
+                        String passwordFile = args[++i];
+                        try {
+                            Path path = Paths.get(passwordFile);
+                            if (!Files.exists(path)) {
+                                throw new IllegalArgumentException("Password file does not exist: " + passwordFile);
+                            }
+                            // Read the first line of the file as the password
+                            password = Files.readAllLines(path).get(0);
+                            if (password == null || password.isEmpty()) {
+                                throw new IllegalArgumentException("Password file is empty");
+                            }
+                        } catch (IOException e) {
+                            throw new IllegalArgumentException("Could not read password file: " + e.getMessage());
+                        }
+                    }
+                    break;
+                case "--prompt-password":
+                    Console console = System.console();
+                    if (console == null) {
+                        throw new IllegalArgumentException("Console not available for password prompt");
+                    }
+                    char[] passwordChars = console.readPassword("Enter certificate password: ");
+                    if (passwordChars == null || passwordChars.length == 0) {
+                        throw new IllegalArgumentException("Password cannot be empty");
+                    }
+                    password = new String(passwordChars);
+                    // Clear the password array for security
+                    java.util.Arrays.fill(passwordChars, '0');
                     break;
                 case "-l":
                 case "--location":
@@ -151,12 +199,24 @@ public class PDFSignerApp {
     }
 
     private static void showUsage() {
-        System.out.println("Usage: java PDFSignerApp [OPTIONS]");
+        System.out.println("PDF Signer - Sign PDF files using a PFX certificate");
+        System.out.println();
+        System.out.println("Usage: java -jar pdf-signer.jar [options]");
+        System.out.println();
+        System.out.println("GUI Mode:");
+        System.out.println("  java -jar pdf-signer.jar");
+        System.out.println();
+        System.out.println("Command line mode:");
+        System.out.println("  java -jar pdf-signer.jar [options]");
+        System.out.println();
         System.out.println("Options:");
-        System.out.println("  -i, --input-dir     Input directory containing PDF files (required)");
-        System.out.println("  -o, --output-dir    Output directory for signed PDFs (required)");
+        System.out.println("  -i, --input-dir      Input directory containing PDF files (required)");
+        System.out.println("  -o, --output-dir     Output directory for signed PDFs (required)");
         System.out.println("  -c, --cert          Path to the PFX certificate file (required)");
         System.out.println("  -p, --password      Password for the PFX certificate (required)");
+        System.out.println("  --password-env      Environment variable containing the password");
+        System.out.println("  --password-file     File containing the password (only first line is read)");
+        System.out.println("  --prompt-password   Prompt for password (more secure)");
         System.out.println("  -l, --location      Location for signature (default: Madrid)");
         System.out.println("  -r, --reason        Reason for signature (default: Document validation)");
         System.out.println("  -v, --visible       Make signature visible (default: false)");
