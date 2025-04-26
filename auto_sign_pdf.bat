@@ -7,9 +7,13 @@ setlocal enabledelayedexpansion
 :: This script automates PDF signing using AutoFirma (the Spanish government's 
 :: electronic signature tool) using a PFX certificate.
 :: 
-:: Usage: auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file> -p <password>
+:: Usage: auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file>
+::        auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file> -p <password>
+::        auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file> --password-env PDF_CERT_PASSWORD
+::        auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file> --password-file <password_file>
+::        auto_sign_pdf.bat -i <input_dir> -o <output_dir> -c <cert_file> --prompt-password
 ::
-:: Author: AI Assistant
+:: Author: gr3ym4n
 :: ============================================================
 
 :: Default values
@@ -17,29 +21,42 @@ set "INPUT_DIR="
 set "OUTPUT_DIR="
 set "CERT_FILE="
 set "PASSWORD="
+set "PASSWORD_ENV=PDF_CERT_PASSWORD"
+set "PASSWORD_FILE="
+set "PROMPT_PASSWORD="
 set "LOCATION=Madrid"
 set "REASON=Document validation"
 set "VISIBLE=false"
 set "TIMESTAMP=false"
 
+:: Check if PDF_CERT_PASSWORD environment variable is set (default method)
+if defined PDF_CERT_PASSWORD (
+    set "PASSWORD=%PDF_CERT_PASSWORD%"
+)
+
 :: Function to display help message
 :show_help
-    echo Usage: %0 [OPTIONS]
-    echo Automatically sign PDF files using AutoFirma
+    echo AutoFirma PDF Signing Script for Windows
+    echo.
+    echo Usage: %~nx0 [options]
     echo.
     echo Options:
+    echo   -h, --help           Show this help message
     echo   -i, --input-dir      Input directory containing PDF files (required)
     echo   -o, --output-dir     Output directory for signed PDFs (required)
     echo   -c, --cert           Path to the PFX certificate file (required)
-    echo   -p, --password       Password for the PFX certificate (required)
+    echo   -p, --password       Password for the PFX certificate (not recommended, use env var instead)
+    echo   --password-env       Environment variable containing the password (default: PDF_CERT_PASSWORD)
+    echo   --password-file      File containing the password (only first line is read)
+    echo   --prompt-password    Prompt for password (more secure)
     echo   -l, --location       Location for signature (default: Madrid)
     echo   -r, --reason         Reason for signature (default: Document validation)
-    echo   -v, --visible        Make signature visible (default: false)
-    echo   -t, --timestamp      Add timestamp to signature (default: false)
-    echo   -h, --help           Display this help message
+    echo   -v, --visible        Make signature visible
+    echo   -t, --timestamp      Add timestamp to signature
     echo.
-    echo Example:
-    echo   %0 -i .\pdfs -o .\signed_pdfs -c .\certificate.pfx -p mypassword -l "Barcelona" -r "Invoice approval" -v
+    echo Environment variables:
+    echo   PDF_CERT_PASSWORD    Certificate password (preferred method)
+    echo.
     exit /b 0
 
 :: Function to log messages with colors
@@ -120,6 +137,40 @@ set "TIMESTAMP=false"
         goto parse_args
     )
     
+    if "%~1"=="--password-env" (
+        set "PASSWORD_ENV=%~2"
+        call set "PASSWORD=%%%~2%%"
+        if "!PASSWORD!"=="" (
+            call :log "ERROR" "Environment variable %~2 not set or empty"
+            exit /b 1
+        )
+        shift
+        shift
+        goto parse_args
+    )
+    
+    if "%~1"=="--password-file" (
+        set "PASSWORD_FILE=%~2"
+        if not exist "%~2" (
+            call :log "ERROR" "Password file does not exist: %~2"
+            exit /b 1
+        )
+        set /p PASSWORD=<"%~2"
+        if "!PASSWORD!"=="" (
+            call :log "ERROR" "Password file is empty"
+            exit /b 1
+        )
+        shift
+        shift
+        goto parse_args
+    )
+    
+    if "%~1"=="--prompt-password" (
+        set "PROMPT_PASSWORD=true"
+        shift
+        goto parse_args
+    )
+    
     if "%~1"=="-l" (
         set "LOCATION=%~2"
         shift
@@ -189,8 +240,18 @@ set "TIMESTAMP=false"
     )
     
     if "%PASSWORD%"=="" (
-        call :log "ERROR" "Certificate password is required (-p, --password)"
-        exit /b 1
+        if "%PROMPT_PASSWORD%"=="true" (
+            :: PowerShell is used to securely read the password
+            for /f "usebackq delims=" %%p in (`powershell -Command "$pwd = Read-Host 'Enter certificate password' -AsSecureString; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($pwd); $plaintext = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR); $plaintext"`) do set "PASSWORD=%%p"
+            
+            if "!PASSWORD!"=="" (
+                call :log "ERROR" "Password cannot be empty"
+                exit /b 1
+            )
+        ) else (
+            call :log "ERROR" "Certificate password is required. Set PDF_CERT_PASSWORD environment variable or use one of the password options."
+            exit /b 1
+        )
     )
     
     :: Check if input directory exists

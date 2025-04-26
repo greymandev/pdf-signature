@@ -3,6 +3,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.After;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -12,6 +13,8 @@ import java.util.List;
 
 /**
  * Test unitario para validar PDFSignerApp
+ * 
+ * @author gr3ym4n
  */
 public class PDFSignerAppTest {
     
@@ -22,9 +25,13 @@ public class PDFSignerAppTest {
     private File outputDir;
     private File certFile;
     private File dummyPdf;
+    private String originalEnvPassword;
     
     @Before
     public void setUp() throws Exception {
+        // Guardar el valor original de la variable de entorno
+        originalEnvPassword = System.getenv("PDF_CERT_PASSWORD");
+        
         // Crear directorios temporales para pruebas
         inputDir = tempFolder.newFolder("input");
         outputDir = tempFolder.newFolder("output");
@@ -36,6 +43,16 @@ public class PDFSignerAppTest {
         // Crear un PDF ficticio para probar
         dummyPdf = new File(inputDir, "test.pdf");
         Files.write(dummyPdf.toPath(), "dummy PDF content".getBytes());
+    }
+    
+    @After
+    public void tearDown() {
+        // Restaurar el entorno original
+        if (originalEnvPassword != null) {
+            setEnv("PDF_CERT_PASSWORD", originalEnvPassword);
+        } else {
+            clearEnv("PDF_CERT_PASSWORD");
+        }
     }
     
     @Test
@@ -68,13 +85,87 @@ public class PDFSignerAppTest {
         assertEquals("Timestamp debería ser true", "true", result[7]);
     }
     
-    @Test(expected = Exception.class)
-    public void testParseArgsMissingRequired() throws Exception {
+    @Test
+    public void testParseArgsUsingEnvironmentVariable() throws Exception {
+        // Establecer variable de entorno para la prueba
+        setEnv("PDF_CERT_PASSWORD", "env_test_password");
+        
         // Acceder al método parseArgs usando reflection
         Method parseArgsMethod = PDFSignerApp.class.getDeclaredMethod("parseArgs", String[].class);
         parseArgsMethod.setAccessible(true);
         
-        // Falta el parámetro obligatorio --password
+        // No incluimos el parámetro --password ya que debe tomarlo de la variable de entorno
+        String[] args = {
+            "--input-dir", inputDir.getAbsolutePath(),
+            "--output-dir", outputDir.getAbsolutePath(),
+            "--cert", certFile.getAbsolutePath()
+        };
+        
+        String[] result = (String[]) parseArgsMethod.invoke(null, (Object) args);
+        
+        assertNotNull("parseArgs debería devolver un array no nulo", result);
+        assertEquals("La contraseña debería obtenerse de la variable de entorno", "env_test_password", result[3]);
+    }
+    
+    @Test
+    public void testParseArgsUsingCustomEnvironmentVariable() throws Exception {
+        // Establecer variable de entorno para la prueba
+        setEnv("CUSTOM_PASSWORD_VAR", "custom_env_password");
+        
+        // Acceder al método parseArgs usando reflection
+        Method parseArgsMethod = PDFSignerApp.class.getDeclaredMethod("parseArgs", String[].class);
+        parseArgsMethod.setAccessible(true);
+        
+        String[] args = {
+            "--input-dir", inputDir.getAbsolutePath(),
+            "--output-dir", outputDir.getAbsolutePath(),
+            "--cert", certFile.getAbsolutePath(),
+            "--password-env", "CUSTOM_PASSWORD_VAR"
+        };
+        
+        String[] result = (String[]) parseArgsMethod.invoke(null, (Object) args);
+        
+        assertNotNull("parseArgs debería devolver un array no nulo", result);
+        assertEquals("La contraseña debería obtenerse de la variable de entorno personalizada", 
+                "custom_env_password", result[3]);
+        
+        // Limpiar variable de entorno de prueba
+        clearEnv("CUSTOM_PASSWORD_VAR");
+    }
+    
+    @Test
+    public void testParseArgsUsingPasswordFile() throws Exception {
+        // Crear un archivo de contraseña de prueba
+        File passwordFile = new File(tempFolder.getRoot(), "password.txt");
+        Files.write(passwordFile.toPath(), "file_password".getBytes());
+        
+        // Acceder al método parseArgs usando reflection
+        Method parseArgsMethod = PDFSignerApp.class.getDeclaredMethod("parseArgs", String[].class);
+        parseArgsMethod.setAccessible(true);
+        
+        String[] args = {
+            "--input-dir", inputDir.getAbsolutePath(),
+            "--output-dir", outputDir.getAbsolutePath(),
+            "--cert", certFile.getAbsolutePath(),
+            "--password-file", passwordFile.getAbsolutePath()
+        };
+        
+        String[] result = (String[]) parseArgsMethod.invoke(null, (Object) args);
+        
+        assertNotNull("parseArgs debería devolver un array no nulo", result);
+        assertEquals("La contraseña debería obtenerse del archivo", "file_password", result[3]);
+    }
+    
+    @Test(expected = Exception.class)
+    public void testParseArgsMissingAllPasswordMethods() throws Exception {
+        // Asegurar que no hay variable de entorno de contraseña
+        clearEnv("PDF_CERT_PASSWORD");
+        
+        // Acceder al método parseArgs usando reflection
+        Method parseArgsMethod = PDFSignerApp.class.getDeclaredMethod("parseArgs", String[].class);
+        parseArgsMethod.setAccessible(true);
+        
+        // Faltan todos los métodos de contraseña (directa, env, file, prompt)
         String[] args = {
             "--input-dir", inputDir.getAbsolutePath(),
             "--output-dir", outputDir.getAbsolutePath(),
@@ -159,5 +250,26 @@ public class PDFSignerAppTest {
         
         // En un test real, aquí llamaríamos a processPDFs, pero como depende de AutoFirma,
         // no lo hacemos en este test unitario
+    }
+    
+    // Métodos de utilidad para manejar variables de entorno
+    
+    private void setEnv(String name, String value) {
+        try {
+            java.lang.reflect.Field field = System.getenv().getClass().getDeclaredField("m");
+            field.setAccessible(true);
+            java.util.Map<String, String> env = (java.util.Map<String, String>) field.get(System.getenv());
+            if (value == null) {
+                env.remove(name);
+            } else {
+                env.put(name, value);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo establecer la variable de entorno", e);
+        }
+    }
+    
+    private void clearEnv(String name) {
+        setEnv(name, null);
     }
 } 
