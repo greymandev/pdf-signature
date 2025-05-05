@@ -1,21 +1,41 @@
-MIT License
-
+PDF Signature Software License
 Copyright (c) 2025 gr3ym4n
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is licensed under the GNU Affero General Public License version 3 (AGPL-3.0) with the following additional terms and conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Permission is hereby granted, free of charge, to any person or entity to:
+   - Use the software for any purpose
+   - Copy and distribute the software
+   - Modify the software
+   - Distribute modified versions
+   - Use the software for commercial purposes, subject to the restrictions below
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Commercial Use Restrictions:
+   - Private entities with more than 500 employees are prohibited from using this software for commercial purposes without obtaining a separate commercial license from the copyright holder.
+   - This restriction applies to both the original software and any modified versions.
+   - This restriction does not apply to:
+     * Educational institutions
+     * Non-profit organizations
+     * Government entities
+     * Open source projects
+     * Private entities with 500 or fewer employees
+
+3. Additional Requirements:
+   - Any modified versions must be distributed under the same license terms
+   - Source code must be made available when distributing the software
+   - All modifications must be clearly documented
+   - The original copyright notice must be preserved
+
+4. Disclaimer:
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+5. Contact:
+   For commercial licensing inquiries, please contact the copyright holder.
+
+This license is based on the GNU Affero General Public License version 3 (AGPL-3.0) with additional terms and conditions. The full text of the AGPL-3.0 can be found at: https://www.gnu.org/licenses/agpl-3.0.html
