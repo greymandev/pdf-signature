@@ -138,6 +138,7 @@ Para modificar las herramientas o contribuir al proyecto:
 ## Documentación Adicional
 
 - [Documentación detallada de PDFSignerApp](README-PDFSignerApp.MD)
+- [Guía de empaquetado para diferentes plataformas](README-PACKAGING.md)
 - [Sitio oficial de AutoFirma](https://firmaelectronica.gob.es/Home/Ciudadanos/Aplicaciones-Firma.html)
 
 # PDF Signer Test Suite
