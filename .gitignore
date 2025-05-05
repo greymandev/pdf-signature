@@ -16,6 +16,7 @@ Thumbs.db
 
 # Compiled files
 *.class
+!gradle/wrapper/gradle-wrapper.jar
 *.jar
 target/
 build/
