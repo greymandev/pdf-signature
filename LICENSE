@@ -18,7 +18,8 @@ This software is licensed under the GNU Affero General Public License version 3 
      * Non-profit organizations
      * Government entities
      * Open source projects
-     * Private entities with 500 or fewer employees
+     * Private entities with 500 or fewer employees 
+     * Or Private entities with more than 500 employees but previously authorized by the author.
 
 3. Additional Requirements:
    - Any modified versions must be distributed under the same license terms
