@@ -18,6 +18,7 @@ Thumbs.db
 *.class
 !gradle/wrapper/gradle-wrapper.jar
 *.jar
+!releases/*.jar
 target/
 build/
 out/
