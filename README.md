@@ -1,125 +1,60 @@
 # PDF Signer
 
-Herramienta para firmar documentos PDF utilizando AutoFirma (herramienta oficial del gobierno español para firmas electrónicas) con certificados PFX.
+Herramienta simple y multiplataforma para firmar documentos PDF masivamente utilizando AutoFirma y certificados PFX/P12.
 
 ## Requisitos
 
-- AutoFirma instalado ([Descarga oficial](https://firmaelectronica.gob.es/Home/Descargas.html))
-- Certificado válido en formato PFX (.pfx) o P12 (.p12)
-- Java Runtime Environment (JRE) 8 o superior (solo para la versión Java)
+- **Python 3** instalado.
+- **AutoFirma** instalado ([Descarga oficial](https://firmaelectronica.gob.es/Home/Descargas.html)).
+- Certificado válido en formato `.pfx` o `.p12`.
 
-## Versiones Disponibles
+## Instalación
 
-### 1. Aplicación Java (Recomendada)
-
-La aplicación `PDFSignerApp` proporciona tanto una interfaz gráfica como una interfaz de línea de comandos.
-
-#### Instalación
-
-1. Descarga la última versión desde la carpeta `releases`
-2. Extrae el contenido en una carpeta de tu elección
-3. Asegúrate de que Java esté instalado en tu sistema
-
-#### Ejecución
-
-**Interfaz Gráfica:**
-- En Windows: Haz doble clic en `run.bat`
-- En Mac/Linux: Ejecuta `./run.sh`
-
-**Línea de Comandos:**
-```bash
-# Windows
-java -cp "PDFSigner-1.0.0.jar;libs/*" PDFSignerApp [opciones]
-
-# Mac/Linux
-java -cp "PDFSigner-1.0.0.jar:libs/*" PDFSignerApp [opciones]
-```
-
-### 2. Scripts
-
-También disponemos de scripts para diferentes sistemas operativos:
-
-- `auto_sign_pdf.sh` (Linux/macOS)
-- `auto_sign_pdf.bat` (Windows CMD)
-- `auto_sign_pdf.ps1` (Windows PowerShell)
+1. Clona este repositorio o descarga `autofirma.py`.
+2. Asegúrate de tener Python 3 instalado.
 
 ## Uso
 
-### Opciones Comunes
-
-| Opción | Descripción | Requerido | Valor por defecto |
-|--------|-------------|-----------|-------------------|
-| `-i, --input-dir` | Directorio con PDFs a firmar | Sí | - |
-| `-o, --output-dir` | Directorio para PDFs firmados | Sí | - |
-| `-c, --cert` | Ruta al certificado PFX | Sí | - |
-| `-p, --password` | Contraseña del certificado | Sí | - |
-| `-l, --location` | Ubicación para la firma | No | Madrid |
-| `-r, --reason` | Razón de la firma | No | Document validation |
-| `-v, --visible` | Hacer la firma visible | No | false |
-| `-t, --timestamp` | Añadir sello de tiempo | No | false |
-
-### Uso Seguro de Contraseñas
-
-Para mayor seguridad, puedes usar la variable de entorno `PDF_CERT_PASSWORD`:
+Ejecuta el script `autofirma.py` con los argumentos necesarios:
 
 ```bash
-# Windows (CMD)
-set PDF_CERT_PASSWORD=tu_contraseña
-
-# Windows (PowerShell)
-$Env:PDF_CERT_PASSWORD = "tu_contraseña"
-
-# Mac/Linux
-export PDF_CERT_PASSWORD='tu_contraseña'
+python3 autofirma.py -i <directorio_entrada> -o <directorio_salida> -c <certificado.pfx> -p <contraseña>
 ```
+
+### Opciones
+
+| Opción | Descripción | Requerido |
+|--------|-------------|-----------|
+| `-i, --input-dir` | Directorio con los PDFs a firmar | Sí |
+| `-o, --output-dir` | Directorio donde se guardarán los PDFs firmados | Sí |
+| `-c, --cert` | Ruta al certificado (.pfx o .p12) | Sí |
+| `-p, --password` | Contraseña del certificado | Sí* |
+| `-l, --location` | Lugar de la firma (Default: Madrid) | No |
+| `-r, --reason` | Razón de la firma (Default: Document validation) | No |
+| `-v, --visible` | Hacer la firma visible en el PDF | No |
+| `-t, --timestamp` | Añadir sello de tiempo (Timestamp) | No |
+
+\* *La contraseña también puede pasarse mediante la variable de entorno `PDF_CERT_PASSWORD` para mayor seguridad.*
 
 ### Ejemplos
 
-**Interfaz Gráfica:**
-1. Ejecuta la aplicación
-2. Selecciona el directorio de entrada con los PDFs
-3. Selecciona el directorio de salida
-4. Selecciona el certificado PFX
-5. Introduce la contraseña
-6. Configura las opciones adicionales
-7. Haz clic en "Firmar"
-
-**Línea de Comandos:**
+**Básico:**
 ```bash
-# Ejemplo básico
-java -jar PDFSigner-1.0.0.jar -i ./pdfs -o ./firmados -c ./certificado.pfx -p micontraseña
+python3 autofirma.py -i ./docs -o ./signed -c cert.pfx -p 123456
+```
 
-# Con firma visible
-java -jar PDFSigner-1.0.0.jar -i ./pdfs -o ./firmados -c ./certificado.pfx -p micontraseña -v -l "Madrid" -r "Validación de documento"
+**Con firma visible y timestamp:**
+```bash
+python3 autofirma.py -i ./docs -o ./signed -c cert.pfx -p 123456 -v -t
+```
+
+**Usando variable de entorno (Más seguro):**
+```bash
+export PDF_CERT_PASSWORD="mi_contraseña_secreta"
+python3 autofirma.py -i ./docs -o ./signed -c cert.pfx
 ```
 
 ## Solución de Problemas
 
-### Problemas Comunes
-
-1. **AutoFirma no encontrado**
-   - Verifica que AutoFirma esté instalado
-   - Comprueba que esté en una ubicación estándar o en el PATH
-
-2. **Error de certificado**
-   - Verifica que el formato sea PFX/P12
-   - Comprueba que la contraseña sea correcta
-
-3. **Permisos denegados**
-   - Ejecuta como administrador si es necesario
-   - Verifica los permisos de los directorios
-
-4. **Java no encontrado**
-   - Instala Java 8 o superior
-   - Verifica que JAVA_HOME esté configurado
-
-## Soporte
-
-Si encuentras algún problema:
-1. Verifica los requisitos previos
-2. Revisa la sección de solución de problemas
-3. Abre un issue en el repositorio con:
-   - Sistema operativo
-   - Versión de Java
-   - Pasos para reproducir el error
-   - Logs de error (si los hay)
+- **AutoFirma no encontrado**: Asegúrate de que AutoFirma esté instalado en la ubicación por defecto o que el ejecutable esté en tu PATH.
+- **Error de permisos**: Asegúrate de tener permisos de lectura/escritura en los directorios de entrada y salida.
