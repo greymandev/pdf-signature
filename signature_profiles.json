@@ -1,0 +1,12 @@
+{
+    "default": {
+        "page": 1,
+        "rect": {
+            "x": 10,
+            "y": 122,
+            "width": 27,
+            "height": 13
+        },
+        "text": "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con un certificado emitido por $$ISSUERCN$$"
+    }
+}
