@@ -2,10 +2,17 @@
 
 Herramienta simple y multiplataforma para firmar documentos PDF masivamente utilizando AutoFirma y certificados PFX/P12.
 
+## Características
+- Firma PAdES masiva.
+- **Posicionamiento Inteligente**: Cuando se activa firma visible, detecta automáticamente la última página y busca un hueco en blanco (Derecha o Izquierda) para no tapar texto.
+- Ejecución Cross-platform (Windows, macOS, Linux).
+- Soporte para `.env`.
+
 ## Requisitos
 
 - **Python 3** instalado.
-- **AutoFirma** instalado ([Descarga oficial](https://firmaelectronica.gob.es/Home/Descargas.html)).
+- Librerías: `pip install -r requirements.txt` (incluye `python-dotenv` y `pypdf`).
+- **AutoFirma** instalado.
 - Certificado válido en formato `.pfx` o `.p12`.
 
 ## Instalación
@@ -29,12 +36,14 @@ python3 autofirma.py -i <directorio_entrada> -o <directorio_salida> -c <certific
 | `-o, --output-dir` | Directorio donde se guardarán los PDFs firmados | Sí |
 | `-c, --cert` | Ruta al certificado (.pfx o .p12) | Sí |
 | `-p, --password` | Contraseña del certificado | Sí* |
-| `-l, --location` | Lugar de la firma (Default: Madrid) | No |
-| `-r, --reason` | Razón de la firma (Default: Document validation) | No |
+| `-l, --location` | Lugar de la firma (Opcional) | No |
+| `-r, --reason` | Razón de la firma (Opcional) | No |
 | `-v, --visible` | Hacer la firma visible en el PDF | No |
 | `-t, --timestamp` | Añadir sello de tiempo (Timestamp) | No |
+| `-a, --alias` | Alias del certificado (Si se omite, se detecta auto.) | No |
 
-\* *La contraseña también puede pasarse mediante la variable de entorno `PDF_CERT_PASSWORD` para mayor seguridad.*
+\* *La contraseña también puede pasarse mediante la variable de entorno `PDF_CERT_PASSWORD` en un archivo `.env` o en el sistema.*
+
 
 ### Ejemplos
 

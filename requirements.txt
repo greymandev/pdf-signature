@@ -1,2 +1,2 @@
-# No external dependencies required.
-# Uses Python Standard Library.
+python-dotenv
+pypdf

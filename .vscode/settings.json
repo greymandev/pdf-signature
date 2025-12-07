@@ -1,0 +1,20 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/thumbs.db": true,
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/._*": true,
+        "**/test_output.txt": true,
+        "**/*.properties": true
+    },
+    "search.exclude": {
+        "**/__pycache__": true,
+        "**/._*": true,
+        "**/*.pyc": true
+    }
+}

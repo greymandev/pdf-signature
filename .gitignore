@@ -40,10 +40,10 @@ venv.bak/
 
 # IDE files
 .idea/
-.vscode/
 *.iml
 *.iws
 *.ipr
+key/
 
 # Logs
 *.log

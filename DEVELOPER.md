@@ -15,8 +15,19 @@ This project uses a Python script (`autofirma.py`) to wrap the AutoFirma CLI. It
 ## Running Tests
 We use `unittest` for testing.
 
+### Unit Tests
 ```bash
 python3 -m unittest discover tests
+```
+
+### End-to-End (E2E) Tests
+To run the E2E tests, you need:
+1. A valid certificate in `key/certificado.pfx`.
+2. A password set in `.env` as `PDF_CERT_PASSWORD`.
+3. A source PDF (the test automatically looks for `*convocatoria*.pdf` or falls back to the manual).
+
+```bash
+python3 -m unittest tests/test_e2e.py
 ```
 
 ## Contributing
