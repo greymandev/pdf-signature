@@ -17,11 +17,35 @@ Herramienta simple y multiplataforma para firmar documentos PDF masivamente util
 
 ## Uso Rápido
 
+### Opción 1: Ejecución Automática (Recomendado)
+
+1. **Configurar variables de entorno:**
+   ```bash
+   # Mac/Linux
+   cp .env.template .env
+   
+   # Windows
+   copy .env.template .env
+   ```
+
+2. **Editar `.env`** con tus valores personales (directorios, certificado, contraseña, etc.)
+
+3. **Ejecutar el script:**
+   ```bash
+   # Mac/Linux
+   ./run.sh
+   
+   # Windows PowerShell
+   .\run.ps1
+   ```
+
+### Opción 2: Ejecución Manual
+
 ```bash
-python autofirma.py -i ./docs -o ./signed -c cert.pfx -p 123456 -v
+python autofirma.py -i ./pdfs -o ./signed -c cert.pfx -p 123456 -v
 ```
 
-### Argumentos Principales
+### Argumentos Principales (Solo para Ejecución Manual)
 - `-i`: Directorio de entrada.
 - `-o`: Directorio de salida.
 - `-c`: Certificado (.pfx).
@@ -33,7 +57,9 @@ python autofirma.py -i ./docs -o ./signed -c cert.pfx -p 123456 -v
 
 Para detalles sobre cómo configurar **perfiles de firma visible** (coordenadas, textos personalizados) y para la **guía de desarrollo**, consulta:
 
-👉 [Guía de Desarrollo y Configuración Avanzada (DEVELOPMENT.md)](DEVELOPMENT.md)
+👉 [Guía de Desarrollo y Configuración Avanzada](docs/DEVELOPMENT.md)
+
+👉 [Guía de Inicio Rápido](docs/QUICKSTART.md)
 
 ## Pruebas
 

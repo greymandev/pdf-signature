@@ -1,6 +1,18 @@
 PDF Signature Software License
 Copyright (c) 2025 gr3ym4n
 
+SCOPE OF THIS LICENSE:
+This license applies exclusively to the Python source code files (.py) and associated 
+scripts (run.sh, run.ps1) contained in this repository. This includes autofirma.py 
+and all test files.
+
+THIRD-PARTY SOFTWARE NOTICE:
+This software uses AutoFirma as an external tool for digital signing operations.
+AutoFirma is developed by the Spanish Government (Gobierno de España) and is NOT 
+covered by this license. AutoFirma has its own license terms which must be respected.
+For AutoFirma licensing information, visit:
+https://firmaelectronica.gob.es/Home/Ciudadanos/Aplicaciones-Firma.html
+
 This software is licensed under the GNU Affero General Public License version 3 (AGPL-3.0) with the following additional terms and conditions:
 
 1. Permission is hereby granted, free of charge, to any person or entity to:

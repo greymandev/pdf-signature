@@ -34,16 +34,33 @@ class TestAutofirma(unittest.TestCase):
         cmd = autofirma.find_autofirma_command()
         self.assertEqual(cmd, ["/usr/bin/autofirma"])
 
-    def test_create_config(self):
-        config_path = autofirma.create_config(visible=True, x=100, y=200)
-        self.assertTrue(os.path.exists(config_path))
+    def test_generate_config_lines_visible(self):
+        """Test that visible signature config generates correct lines."""
+        config_lines = autofirma.generate_config_lines(visible=True, x=100, y=200, width=50, height=25)
         
-        with open(config_path, 'r') as f:
-            content = f.read()
-            self.assertIn("signaturePositionOnPageLowerLeftX=100", content)
-            self.assertIn("signaturePositionOnPageLowerLeftY=200", content)
-            
-        os.remove(config_path)
+        self.assertIn("signaturePositionOnPageLowerLeftX=100", config_lines)
+        self.assertIn("signaturePositionOnPageLowerLeftY=200", config_lines)
+        self.assertIn("signaturePositionOnPageUpperRightX=150", config_lines)  # x + width
+        self.assertIn("signaturePositionOnPageUpperRightY=225", config_lines)  # y + height
+        self.assertIn("signatureRenderingMode=1", config_lines)
+    
+    def test_generate_config_lines_with_reason_location(self):
+        """Test that reason and location are added to config."""
+        config_lines = autofirma.generate_config_lines(
+            visible=False, 
+            location="Madrid", 
+            reason="Test signature"
+        )
+        
+        self.assertIn("signatureProductionCity=Madrid", config_lines)
+        self.assertIn("signatureReason=Test signature", config_lines)
+    
+    def test_generate_config_lines_invisible(self):
+        """Test that invisible signature generates minimal config."""
+        config_lines = autofirma.generate_config_lines(visible=False)
+        
+        # Should not have position lines for invisible signature
+        self.assertFalse(any("signaturePositionOnPage" in line for line in config_lines))
 
     @patch('subprocess.run')
     def test_sign_pdf_success(self, mock_run):
