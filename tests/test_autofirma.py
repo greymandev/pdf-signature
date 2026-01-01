@@ -34,15 +34,25 @@ class TestAutofirma(unittest.TestCase):
         cmd = autofirma.find_autofirma_command()
         self.assertEqual(cmd, ["/usr/bin/autofirma"])
 
+    @patch.dict(os.environ, {
+        'PDF_SIG_RECT_X': '100',
+        'PDF_SIG_RECT_Y': '200',
+        'PDF_SIG_WIDTH': '50',
+        'PDF_SIG_HEIGHT': '25',
+        'PDF_SIG_PAGE': '1',
+        'PDF_SIG_TEXT': 'Test signature',
+        'PDF_SIG_COLOR': 'black'
+    })
     def test_generate_config_lines_visible(self):
         """Test that visible signature config generates correct lines."""
-        config_lines = autofirma.generate_config_lines(visible=True, x=100, y=200, width=50, height=25)
+        config_lines = autofirma.generate_config_lines(visible=True)
         
         self.assertIn("signaturePositionOnPageLowerLeftX=100", config_lines)
         self.assertIn("signaturePositionOnPageLowerLeftY=200", config_lines)
         self.assertIn("signaturePositionOnPageUpperRightX=150", config_lines)  # x + width
         self.assertIn("signaturePositionOnPageUpperRightY=225", config_lines)  # y + height
         self.assertIn("signatureRenderingMode=1", config_lines)
+        self.assertIn("layer2Text=Test signature", config_lines)
     
     def test_generate_config_lines_with_reason_location(self):
         """Test that reason and location are added to config."""
