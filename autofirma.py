@@ -141,22 +141,40 @@ def generate_config_lines(visible, location=None, reason=None, timestamp=False):
     config_lines = []
     
     if visible:
-        # Configuration from .env with Fallbacks (User preferences 10,122,27,13 default)
-        rect_x = os.environ.get("PDF_SIG_RECT_X", "10")
-        rect_y = os.environ.get("PDF_SIG_RECT_Y", "122")
-        rect_w = os.environ.get("PDF_SIG_WIDTH", "27")
-        rect_h = os.environ.get("PDF_SIG_HEIGHT", "13")
-        sig_page = os.environ.get("PDF_SIG_PAGE", "1")
+        # Validar variables requeridas para firma visible
+        required_vars = {
+            'PDF_SIG_RECT_X': 'Coordenada X de la firma',
+            'PDF_SIG_RECT_Y': 'Coordenada Y de la firma',
+            'PDF_SIG_WIDTH': 'Ancho de la firma',
+            'PDF_SIG_HEIGHT': 'Alto de la firma'
+        }
         
-        # Text configuration
-        # Default with variables and newlines support
-        default_text = "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con un certificado emitido por $$ISSUERCN$$"
+        missing_vars = []
+        for var, description in required_vars.items():
+            if not os.environ.get(var):
+                missing_vars.append(f"{var} ({description})")
+        
+        if missing_vars:
+            error_msg = "Para usar firma visible, debes configurar las siguientes variables en tu .env:\n"
+            error_msg += "\n".join(f"  - {var}" for var in missing_vars)
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Leer configuración desde .env (ahora sin defaults)
+        rect_x = os.environ.get("PDF_SIG_RECT_X")
+        rect_y = os.environ.get("PDF_SIG_RECT_Y")
+        rect_w = os.environ.get("PDF_SIG_WIDTH")
+        rect_h = os.environ.get("PDF_SIG_HEIGHT")
+        sig_page = os.environ.get("PDF_SIG_PAGE", "1")  # Default razonable: primera página
+        
+        # Texto (con default razonable)
+        default_text = "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$"
         custom_text = os.environ.get("PDF_SIG_TEXT", default_text)
         
-        # Determine if we should handle literal \n for multiline text from env
+        # Determinar si se debe manejar literal \n para multiline text desde env
         custom_text = custom_text.replace("\\n", "\n")
 
-        # Color
+        # Color (default razonable)
         color = os.environ.get("PDF_SIG_COLOR", "black")
         
         # Image
