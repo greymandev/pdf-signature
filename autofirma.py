@@ -5,18 +5,13 @@ import argparse
 import subprocess
 import platform
 import glob
-import tempfile
 import logging
 import shutil
 import base64
-import json
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-
-from pypdf import PdfReader
 
 # Configure logging
 logging.basicConfig(
@@ -25,90 +20,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-
-def determine_signature_position(pdf_path):
-    """
-    Analyzes the last page of the PDF to determine the best position for the signature.
-    Returns a tuple: (page_number, x, y, width, height)
-    Logic: Search vertically on the RIGHT side for the first available blank space.
-    """
-    try:
-        reader = PdfReader(pdf_path)
-        last_page_index = len(reader.pages) - 1
-        page = reader.pages[last_page_index]
-        
-        # Get page dimensions (MediaBox)
-        # Handle pypdf version differences
-        if hasattr(page, 'mediabox'):
-            media_box = page.mediabox
-        elif hasattr(page, 'mediaBox'):
-            media_box = page.mediaBox
-        else:
-             # Fallback
-             media_box = page['/MediaBox']
-
-        page_width =  int(float(media_box.width))
-        page_height = int(float(media_box.height))
-        
-        # Signature dimensions
-        sig_width = 200
-        sig_height = 100
-        margin = 30
-        padding = 10
-        
-        # X position for Right side
-        target_x = page_width - sig_width - margin
-        
-        # Helper to check if a specific rectangle has text
-        def is_occupied(rect_x, rect_y, rect_w, rect_h):
-            occupied = False
-            
-            def visitor_body(text, cm, tm, fontDict, fontSize):
-                nonlocal occupied
-                if occupied: return
-                
-                # Text position
-                tx = tm[4]
-                ty = tm[5]
-                
-                # Check overlap
-                # Simple point check: is the text start point inside the rect?
-                # For more robustness we could check bounding box, but start point is a good proxy.
-                if (rect_x <= tx <= rect_x + rect_w) and (rect_y <= ty <= rect_y + rect_h):
-                    occupied = True
-
-            page.extract_text(visitor_text=visitor_body)
-            return occupied
-
-        # Search upwards
-        # Start from bottom margin
-        current_y = margin
-        found_y = -1
-        
-        # Limit search to not go too high (e.g., leave header space)
-        # Use 80% of page height as limit
-        limit_y = page_height * 0.8
-        
-        while current_y < limit_y:
-            logger.info(f"Checking position X={target_x}, Y={current_y}...")
-            if not is_occupied(target_x, current_y, sig_width, sig_height):
-                logger.info(f"Found empty space at Y={current_y}")
-                found_y = current_y
-                break
-            else:
-                logger.info(f"Position at Y={current_y} is occupied. Moving up.")
-                current_y += (sig_height + padding)
-                
-        if found_y != -1:
-            return (last_page_index + 1, target_x, found_y, sig_width, sig_height)
-        else:
-            logger.warning("Could not find empty space on the right side. Defaulting to bottom-right (overlap possible).")
-            return (last_page_index + 1, target_x, margin, sig_width, sig_height)
-
-    except Exception as e:
-        logger.error(f"Error analyzing PDF for signature position: {e}")
-        # Fallback to last page, bottom right
-        return (1, 300, 50, 200, 100) # Fallback values
 
 def get_java_command():
     """Returns the java command (e.g. 'java' or full path)."""
@@ -214,58 +125,60 @@ def get_certificate_alias(autofirma_cmd, cert_path, password):
         logger.error(f"Error getting aliases: {e}")
         return None
 
-def load_signature_profiles():
-    """Loads signature profiles from signature_profiles.json."""
+def get_base64_image(image_path):
+    """Reads an image file and returns its base64 string."""
+    if not image_path or not os.path.exists(image_path):
+        return None
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(current_dir, "signature_profiles.json")
-        with open(json_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode('utf-8')
     except Exception as e:
-        logger.warning(f"Could not load signature_profiles.json: {e}. Using internal defaults.")
-        return {}
+        logger.error(f"Error reading image {image_path}: {e}")
+        return None
 
-def generate_config_lines(visible, profile=None, x=None, y=None, width=None, height=None, page=None, location=None, reason=None, timestamp=False):
-    """Generates the configuration lines."""
+def generate_config_lines(visible, location=None, reason=None, timestamp=False):
+    """Generates the configuration lines reading from Environment Variables."""
     config_lines = []
     
     if visible:
-        # Default values
-        rect_x = 10
-        rect_y = 122
-        rect_w = 27
-        rect_h = 13
-        sig_page = 1
-        custom_text = "Firmado digitalmente"
+        # Configuration from .env with Fallbacks (User preferences 10,122,27,13 default)
+        rect_x = os.environ.get("PDF_SIG_RECT_X", "10")
+        rect_y = os.environ.get("PDF_SIG_RECT_Y", "122")
+        rect_w = os.environ.get("PDF_SIG_WIDTH", "27")
+        rect_h = os.environ.get("PDF_SIG_HEIGHT", "13")
+        sig_page = os.environ.get("PDF_SIG_PAGE", "1")
         
-        # Load From Profile if available
-        if profile:
-             rect_x = profile.get("rect", {}).get("x", rect_x)
-             rect_y = profile.get("rect", {}).get("y", rect_y)
-             rect_w = profile.get("rect", {}).get("width", rect_w)
-             rect_h = profile.get("rect", {}).get("height", rect_h)
-             sig_page = profile.get("page", sig_page)
-             custom_text = profile.get("text", custom_text)
+        # Text configuration
+        # Default with variables and newlines support
+        default_text = "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con un certificado emitido por $$ISSUERCN$$"
+        custom_text = os.environ.get("PDF_SIG_TEXT", default_text)
+        
+        # Determine if we should handle literal \n for multiline text from env
+        custom_text = custom_text.replace("\\n", "\n")
 
-        # Allow overrides via kwargs if provided (programmatic overrides)
-        if x is not None: rect_x = x
-        if y is not None: rect_y = y
-        if width is not None: rect_w = width
-        if height is not None: rect_h = height
-        if page is not None: sig_page = page
+        # Color
+        color = os.environ.get("PDF_SIG_COLOR", "black")
         
+        # Image
+        image_path = os.environ.get("PDF_SIG_IMAGE_PATH")
+        image_base64 = get_base64_image(image_path)
+        
+        # Construct Config
+        config_lines.append(f"layer2Text={custom_text}")
         config_lines.append(f"signaturePositionOnPageLowerLeftX={rect_x}")
         config_lines.append(f"signaturePositionOnPageLowerLeftY={rect_y}")
-        config_lines.append(f"signaturePositionOnPageUpperRightX={rect_x + rect_w}")
-        config_lines.append(f"signaturePositionOnPageUpperRightY={rect_y + rect_h}")
+        config_lines.append(f"signaturePositionOnPageUpperRightX={int(rect_x) + int(rect_w)}")
+        config_lines.append(f"signaturePositionOnPageUpperRightY={int(rect_y) + int(rect_h)}")
         config_lines.append(f"signaturePage={sig_page}")
-        
-        # Standard visible signature config
         config_lines.append("signatureRenderingMode=1")
         
-        config_lines.append(f"signatureText={custom_text}")
-        config_lines.append(f"layer2Text={custom_text}")
-    
+        # Font settings from .env (Advanced)
+        config_lines.append(f"layer2FontColor={color}")
+        # Could add size/family if needed via env, but keeping simple for now
+        
+        if image_base64:
+             config_lines.append(f"signatureRubricImage={image_base64}")
+
     if location:
         config_lines.append(f"signatureProductionCity={location}")
         
@@ -277,18 +190,8 @@ def generate_config_lines(visible, profile=None, x=None, y=None, width=None, hei
 
     return config_lines
 
-def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, location=None, reason=None, visible=False, timestamp=False, alias=None, profile=None):
+def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, location=None, reason=None, visible=False, timestamp=False, alias=None):
     """Executes the Autofirma command to sign a single PDF."""
-    
-    # Calculate position if visible is requested
-    # If using a profile with fixed coordinates, dynamic calculation is skipped by generate_config_lines using the profile values.
-    # However, if profile suggests dynamic (e.g. missing rect), we might want to calculate.
-    # For now, we assume if visible is true and we have a profile, the profile dictates the layout.
-    # If no profile, defaults in generate_config_lines apply (which are now custom defaults).
-    
-    # Fallback/Retry Logic Preparation
-    # If we need to calculate variables for dynamic profiles, do it here.
-    # But currently the requirement is fixed coordinates from profile.
     
     # If no alias provided, try to fetch it
     if not alias:
@@ -311,144 +214,111 @@ def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, locati
     if alias:
         cmd.extend(["-alias", alias])
     
-    # Strategy: Try primary config first. If it fails (AutoFirma crash), try fallback.
+    # Generate Config
+    config_lines = generate_config_lines(visible, location=location, reason=reason, timestamp=timestamp)
     
-    # 1. Generate Primary Config
-    # We pass the profile. The generate_config_lines function handles extracting X,Y from it.
-    config_lines = generate_config_lines(visible, profile=profile, location=location, reason=reason, timestamp=timestamp)
+    cmd_attempt = list(cmd)
     
-    # Helper to execute sign command with a specific config
-    def execute_sign_attempt(current_config_lines, description="Primary"):
-        cmd_attempt = list(cmd) # Clone base cmd
-        config_path_cleanup = None
+    if config_lines:
+        config_content = "\n".join(config_lines)
+        logger.info(f"[Config] Content:\n{config_content}") 
         
-        if current_config_lines:
-            # Use Base64 encoding for config
-            config_content = "\n".join(current_config_lines)
-            config_base64 = base64.b64encode(config_content.encode('utf-8')).decode('utf-8')
-            cmd_attempt.extend(["-config", config_base64])
-            logger.info(f"[{description}] Config Base64 prefix: {config_base64[:15]}...")
+        config_base64 = base64.b64encode(config_content.encode('utf-8')).decode('utf-8')
+        cmd_attempt.extend(["-config", config_base64])
 
-        try:
-            logger.info(f"[{description}] Executing signing command...")
-            result = subprocess.run(cmd_attempt, capture_output=True, text=True, check=False)
-            
-            output_exists = os.path.exists(output_file)
-            
-            if result.returncode == 0 and output_exists:
-                logger.info(f"[{description}] Successfully signed: {os.path.basename(input_file)}")
-                return True, result
-            else:
-                logger.warning(f"[{description}] Signing failed. Code: {result.returncode}")
-                # Log a bit of stderr for context
-                if result.stderr:
-                    logger.warning(f"[{description}] Stderr: {result.stderr[:200]}...")
-                return False, result
-        except Exception as e:
-            logger.error(f"[{description}] Exception: {e}")
-            return False, None
-
-    # Attempt 1: Primary
-    success, result = execute_sign_attempt(config_lines, "Primary")
-    
-    if success:
-        return True
-    
-    # Attempt 2: Fallback (Safe Zone - Bottom Left) if visible
-    if visible and not success:
-        logger.warning("Primary signature placement failed. Attempting fallback to Safe Zone (Bottom Left).")
+    try:
+        logger.info(f"Executing signing command...")
+        result = subprocess.run(cmd_attempt, capture_output=True, text=True, check=False)
         
-        # Fallback coordinates (Safe Zone)
-        fallback_x = 50
-        fallback_y = 50
+        output_exists = os.path.exists(output_file)
         
-        # For fallback, we ignore the profile's position and try known safe values, 
-        # but we might want to keep the text or other settings from the profile?
-        # Let's create a temporary profile or just override args.
-        # generate_config_lines accepts overrides.
-        
-        # Use profile if available for text/page, but override coords.
-        fallback_config = generate_config_lines(visible, profile=profile, x=fallback_x, y=fallback_y, location=location, reason=reason, timestamp=timestamp)
-        
-        success_fallback, result_fallback = execute_sign_attempt(fallback_config, "Fallback")
-        
-        if success_fallback:
+        if result.returncode == 0 and output_exists:
+            logger.info(f"Successfully signed: {os.path.basename(input_file)}")
             return True
-        
-        # If fallback failed, rely on the last result (primary or fallback) to log full error
-        result = result_fallback
-
-    # Final Failure Logging
-    logger.error(f"Failed to sign: {os.path.basename(input_file)}")
-    if not os.path.exists(output_file):
-         logger.error(f"Output file was NOT created at: {output_file}")
-    
-    if result:
-        logger.error(f"Exit Code: {result.returncode}")
-        logger.error(f"Stderr: {result.stderr}")
-        logger.error(f"Stdout: {result.stdout}")
-
-    return False
+        else:
+            logger.warning(f"Signing failed. Code: {result.returncode}")
+            if result.stderr:
+                logger.warning(f"Stderr: {result.stderr[:500]}...") # Log more stderr
+            return False
+            
+    except Exception as e:
+        logger.error(f"Exception: {e}")
+        return False
 
 def main():
     parser = argparse.ArgumentParser(description="AutoFirma PDF Signing Tool")
     
-    parser.add_argument("-i", "--input-dir", required=True, help="Input directory containing PDF files")
-    parser.add_argument("-o", "--output-dir", required=True, help="Output directory for signed PDFs")
-    parser.add_argument("-c", "--cert", required=True, help="Path to the PFX/P12 certificate file")
+    # Make arguments optional for dual-mode support (CLI or Env)
+    parser.add_argument("-i", "--input-dir", help="Input directory containing PDF files")
+    parser.add_argument("-o", "--output-dir", help="Output directory for signed PDFs")
+    parser.add_argument("-c", "--cert", help="Path to the PFX/P12 certificate file")
     parser.add_argument("-p", "--password", help="Password for the certificate (can also use PDF_CERT_PASSWORD env var)")
     parser.add_argument("-l", "--location", help="Location for signature")
     parser.add_argument("-r", "--reason", help="Reason for signature")
     parser.add_argument("-v", "--visible", action="store_true", help="Make signature visible")
     parser.add_argument("-t", "--timestamp", action="store_true", help="Add timestamp to signature")
     parser.add_argument("-a", "--alias", help="Certificate alias (optional, will auto-detect if omitted)")
-    parser.add_argument("-P", "--profile", default="default", help="Visible signature profile name (from signature_profiles.json)")
     
     args = parser.parse_args()
 
-    # Password handling
-    password = args.password
-    if not password:
-        password = os.environ.get("PDF_CERT_PASSWORD")
+    # --- Configuration Resolution (CLI vs Env) ---
+    def get_env_bool(key):
+        return os.environ.get(key, "").lower() == "true"
+
+    input_dir = args.input_dir or os.environ.get("PDF_INPUT_DIR")
+    output_dir = args.output_dir or os.environ.get("PDF_OUTPUT_DIR")
+    cert_path = args.cert or os.environ.get("PDF_CERT_PATH")
+    password = args.password or os.environ.get("PDF_CERT_PASSWORD")
+    location = args.location or os.environ.get("PDF_LOCATION")
+    reason = args.reason or os.environ.get("PDF_REASON")
+    visible = args.visible or get_env_bool("PDF_VISIBLE")
+    timestamp = args.timestamp or get_env_bool("PDF_TIMESTAMP")
+    alias = args.alias or os.environ.get("PDF_ALIAS")
     
-    if not password:
-        logger.error("Password is required. Provide it via -p or PDF_CERT_PASSWORD environment variable.")
+    # --- Validation ---
+    missing_params = []
+    if not input_dir: missing_params.append("Input Directory (-i / PDF_INPUT_DIR)")
+    if not output_dir: missing_params.append("Output Directory (-o / PDF_OUTPUT_DIR)")
+    if not cert_path: missing_params.append("Certificate Path (-c / PDF_CERT_PATH)")
+    if not password: missing_params.append("Password (-p / PDF_CERT_PASSWORD)")
+    
+    if missing_params:
+        logger.error("Missing required configuration parameters:")
+        for p in missing_params:
+            logger.error(f"  - {p}")
+        logger.error("Please provide them via command line arguments or .env file.")
         sys.exit(1)
 
-    # Validation
-    if not os.path.isdir(args.input_dir):
-        logger.error(f"Input directory does not exist: {args.input_dir}")
+    # Validate Paths
+    if not os.path.isdir(input_dir):
+        logger.error(f"Input directory does not exist: {input_dir}")
         sys.exit(1)
         
-    if not os.path.exists(args.cert):
-        logger.error(f"Certificate file does not exist: {args.cert}")
+    if not os.path.exists(cert_path):
+        logger.error(f"Certificate file does not exist: {cert_path}")
         sys.exit(1)
 
-    # Ensure output dir is absolute
-    args.output_dir = os.path.abspath(args.output_dir)
-    os.makedirs(args.output_dir, exist_ok=True)
+    output_dir = os.path.abspath(output_dir)
+    # Ensure creation
+    if not os.path.exists(output_dir):
+        try:
+             os.makedirs(output_dir, exist_ok=True)
+        except Exception as e:
+             logger.error(f"Could not create output directory: {e}")
+             sys.exit(1)
 
-    # Find Autofirma
+
     autofirma_cmd = find_autofirma_command()
     if not autofirma_cmd:
         logger.error("AutoFirma executable not found. Please install AutoFirma.")
         sys.exit(1)
     
-    # Load Profiles
-    profiles = load_signature_profiles()
-    active_profile = profiles.get(args.profile)
-    if not active_profile and args.profile != "default":
-        logger.warning(f"Profile '{args.profile}' not found. Using defaults.")
-    
-    # Process files - Ensure absolute paths
-    input_dir_abs = os.path.abspath(args.input_dir)
+    input_dir_abs = os.path.abspath(input_dir)
     pdf_files = glob.glob(os.path.join(input_dir_abs, "*.pdf"))
-    
-    # Cert path absolute
-    cert_path_abs = os.path.abspath(args.cert)
+    cert_path_abs = os.path.abspath(cert_path)
     
     if not pdf_files:
-        logger.warning(f"No PDF files found in {args.input_dir}")
+        logger.warning(f"No PDF files found in {input_dir}")
         sys.exit(0)
 
     logger.info(f"Found {len(pdf_files)} PDF files to process.")
@@ -458,16 +328,13 @@ def main():
 
     for pdf_file in pdf_files:
         filename = os.path.basename(pdf_file)
-        # Avoid processing already signed files if they are in the same dir (though usually output_dir is different)
-        if "-signed.pdf" in filename:
-            continue
+        if "-signed.pdf" in filename: continue
             
         output_filename = os.path.splitext(filename)[0] + "-signed.pdf"
-        output_path = os.path.join(args.output_dir, output_filename)
+        output_path = os.path.join(output_dir, output_filename)
         
         if sign_pdf(autofirma_cmd, pdf_file, output_path, cert_path_abs, password, 
-                   location=args.location, reason=args.reason, visible=args.visible, timestamp=args.timestamp, alias=args.alias,
-                   profile=active_profile):
+                   location=location, reason=reason, visible=visible, timestamp=timestamp, alias=alias):
             success_count += 1
         else:
             failure_count += 1
