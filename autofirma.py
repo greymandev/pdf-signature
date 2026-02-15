@@ -78,6 +78,11 @@ def find_autofirma_command():
 
     elif system == "Linux":
          # First try looking for JAR if we want consistency, but usually /usr/bin/autofirma script works fine
+         # Docker environment: Check for JAR in /usr/lib/AutoFirma/
+         if java_cmd and os.path.exists("/usr/lib/AutoFirma/AutoFirma.jar"):
+             logger.info("Found AutoFirma JAR in Docker environment")
+             return [java_cmd, "-jar", "/usr/lib/AutoFirma/AutoFirma.jar"]
+         
          possible_paths = [
             "/usr/bin/autofirma",
             "/usr/local/bin/autofirma",

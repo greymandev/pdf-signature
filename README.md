@@ -123,6 +123,7 @@ PDF_SIG_TEXT="Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con cert
 
 - **[Guía de Desarrollo](docs/DEVELOPMENT.md)** - Configuración avanzada y desarrollo
 - **[Guía de Inicio Rápido](docs/QUICKSTART.md)** - Tutorial paso a paso
+- **[Despliegue con Docker](docs/DOCKER.md)** - Cómo ejecutar con Docker/Docker Compose
 - **[Pruebas](tests/README.md)** - Cómo ejecutar tests
 
 ## Solución de Problemas

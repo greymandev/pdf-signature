@@ -1,0 +1,32 @@
+services:
+  pdf-signer:
+    build: .
+    container_name: pdf-signature
+    volumes:
+      # Montar directorios locales en el contenedor
+      - ./tests/input_files:/app/input_files
+      - ./tests/output_files:/app/output_files
+      - ./key:/app/key
+    environment:
+      # Configuración requerida
+      - PDF_INPUT_DIR=/app/input_files
+      - PDF_OUTPUT_DIR=/app/output_files
+      - PDF_CERT_PATH=/app/key/certificado.p12
+      - PDF_CERT_PASSWORD=${PDF_CERT_PASSWORD}
+
+      # Configuración de firma visible
+      - PDF_VISIBLE=${PDF_VISIBLE:-true}
+      - PDF_SIG_PAGE=${PDF_SIG_PAGE:-1}
+      - PDF_SIG_RECT_X=${PDF_SIG_RECT_X:-400}
+      - PDF_SIG_RECT_Y=${PDF_SIG_RECT_Y:-50}
+      - PDF_SIG_WIDTH=${PDF_SIG_WIDTH:-150}
+      - PDF_SIG_HEIGHT=${PDF_SIG_HEIGHT:-50}
+      - PDF_SIG_TEXT=${PDF_SIG_TEXT:-Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$}
+      - PDF_SIG_COLOR=${PDF_SIG_COLOR:-black}
+
+      # Configuración opcional
+      - PDF_LOCATION=${PDF_LOCATION:-}
+      - PDF_REASON=${PDF_REASON:-}
+      - PDF_TIMESTAMP=${PDF_TIMESTAMP:-false}
+      - PDF_ALIAS=${PDF_ALIAS:-}
+    restart: "no"

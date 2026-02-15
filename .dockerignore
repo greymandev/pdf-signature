@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.pytest_cache
+.venv
+venv
+
+# Environment
+.env
+.env.local
+
+# Test files
+tests/output_files/*
+!tests/output_files/.gitkeep
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Mac
+.DS_Store
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Logs
+*.log
+
+# Keys (security)
+key/*
+!key/.gitkeep
