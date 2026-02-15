@@ -59,3 +59,4 @@ output/
 *.pfx
 *.p12
 signature.properties
+project_review.md
