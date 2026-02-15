@@ -1,14 +1,14 @@
-# Guía de Inicio Rápido - PDF Signer 🚀
+# Guía de Inicio Rápido - PDF Signer
 
-Esta guía te ayudará a configurar y ejecutar PDF Signer en **menos de 5 minutos**.
+Esta guía te ayudará a configurar y ejecutar PDF Signer en menos de 5 minutos.
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
 1. **Python 3.8+** instalado
 2. **AutoFirma** instalado ([Descargar aquí](https://firmaelectronica.gob.es/Home/Ciudadanos/Aplicaciones-Firma.html))
-3. **Certificado digital** en formato PFX/P12
+3. **Certificado digital** en formato PFX o P12
 
-## ⚡ Configuración en 3 Pasos
+## Instalación en 3 Pasos
 
 ### Paso 1: Instalar Dependencias
 
@@ -28,23 +28,31 @@ cp .env.template .env
 copy .env.template .env
 ```
 
-Abre `.env` en tu editor favorito y configura:
+Edita el archivo `.env` con tu editor favorito:
 
 ```bash
-# REQUERIDO: Edita estos valores
-PDF_INPUT_DIR=./pdfs              # Tu carpeta con PDFs
-PDF_OUTPUT_DIR=./signed            # Carpeta para PDFs firmados
-PDF_CERT_PATH=./key/cert.pfx       # Ruta a tu certificado
-PDF_CERT_PASSWORD=tu_contraseña    # Contraseña del certificado
+# Directorios
+PDF_INPUT_DIR=./tests/input_files     # PDFs a firmar
+PDF_OUTPUT_DIR=./tests/output_files   # PDFs firmados
 
-# OPCIONAL: Personaliza la firma
-PDF_VISIBLE=true                   # Firma visible (true/false)
-PDF_LOCATION=Madrid, España        # Ubicación
-PDF_REASON=Firma de documentos     # Razón de firma
-PDF_PROFILE=default                # Perfil de firma
+# Certificado (¡IMPORTANTE! Usa la extensión correcta: .p12 o .pfx)
+PDF_CERT_PATH=./key/certificado.p12
+PDF_CERT_PASSWORD=tu_contraseña
+
+# Firma visible
+PDF_VISIBLE=true
+
+# Coordenadas (esquina inferior derecha de página A4)
+PDF_SIG_RECT_X=400
+PDF_SIG_RECT_Y=50
+PDF_SIG_WIDTH=150
+PDF_SIG_HEIGHT=50
+
+# Texto de la firma
+PDF_SIG_TEXT="Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con certificado emitido por $$ISSUERCN$$"
 ```
 
-### Paso 3: Ejecutar el Script
+### Paso 3: Ejecutar
 
 **Mac/Linux:**
 ```bash
@@ -56,70 +64,152 @@ PDF_PROFILE=default                # Perfil de firma
 .\run.ps1
 ```
 
-¡Eso es todo! 🎉 Tus PDFs firmados estarán en la carpeta de salida configurada.
+¡Listo! Tus PDFs firmados estarán en la carpeta configurada.
 
 ---
 
-## 🔧 Solución de Problemas
+## Uso Avanzado
 
-### Error: "No se encuentra el archivo .env"
-- Asegúrate de haber copiado `.env.template` a `.env`
-- Verifica que estés en el directorio correcto del proyecto
+### Coordenadas de Firma
 
-### Error: "AutoFirma executable not found"
-- Instala AutoFirma desde [el sitio oficial](https://firmaelectronica.gob.es/Home/Ciudadanos/Aplicaciones-Firma.html)
-- En Mac, verifica que esté en `/Applications/AutoFirma.app`
-- En Windows, verifica la instalación en `Program Files`
+Las coordenadas se miden desde la **esquina inferior izquierda** en puntos:
 
-### Error: "Permission denied" al ejecutar run.sh (Mac/Linux)
+```
+Página A4: 595 x 842 puntos (72 puntos = 1 pulgada)
+
+Esquina inferior izquierda:  x=50,  y=50
+Esquina inferior derecha:    x=400, y=50
+Esquina superior izquierda:  x=50,  y=750
+Esquina superior derecha:    x=400, y=750
+```
+
+**Tamaño recomendado:**
+- Width: 150-200 puntos (~5-7 cm)
+- Height: 50-80 puntos (~1.8-2.8 cm)
+
+### Variables en el Texto
+
+AutoFirma reemplaza automáticamente estas variables:
+
+| Variable | Resultado |
+|----------|-----------|
+| `$$SUBJECTCN$$` | Nombre del firmante |
+| `$$ISSUERCN$$` | Entidad certificadora |
+| `$$SIGNDATE=dd/MM/yyyy$$` | Fecha: 15/02/2026 |
+| `$$SIGNDATE=yyyy-MM-dd$$` | Fecha: 2026-02-15 |
+| `$$LOCATION$$` | Ubicación configurada |
+| `$$REASON$$` | Razón configurada |
+
+**Ejemplo de texto completo:**
+```bash
+PDF_SIG_TEXT="Documento firmado digitalmente por:
+$$SUBJECTCN$$
+Fecha: $$SIGNDATE=dd/MM/yyyy HH:mm$$
+Entidad: $$ISSUERCN$$"
+```
+
+### Usar Perfiles Predefinidos
+
+1. Edita `signature_profiles.json` con tus perfiles
+2. Ejecuta con el perfil deseado:
+
+```bash
+python autofirma.py -i ./pdfs -o ./signed -c cert.p12 -p password -v -P bottom_right
+```
+
+### Ejecución Manual (sin .env)
+
+```bash
+python autofirma.py \
+  -i ./tests/input_files \
+  -o ./tests/output_files \
+  -c ./key/certificado.p12 \
+  -p "tu_contraseña" \
+  -v \
+  --sig-x 400 \
+  --sig-y 50 \
+  --sig-width 150 \
+  --sig-height 50
+```
+
+---
+
+## Solución de Problemas
+
+### "La firma no se ve"
+
+1. Verifica `PDF_VISIBLE=true` en `.env` o usa `-v`
+2. Comprueba que las coordenadas están dentro de la página
+3. Asegúrate de que width/height sean > 50 puntos
+
+### "Error: No se hay ninguna entrada en el almacen con el alias"
+
+El script detecta automáticamente el alias. Si falla, verifica:
+
+```bash
+# Mac
+java -jar /Applications/AutoFirma.app/Contents/Resources/JAR/AutoFirma.jar listaliases -store "pkcs12:/ruta/cert.p12" -password "password"
+
+# Windows
+"C:\Program Files\AutoFirma\AutoFirmaCommandLine.exe" listaliases -store "pkcs12:C:\ruta\cert.p12" -password "password"
+```
+
+### "Variables no se reemplazan"
+
+Usa doble `$`:
+- ✅ Correcto: `$$SUBJECTCN$$`
+- ❌ Incorrecto: `$SUBJECTCN$`
+
+### "Permission denied" (Mac/Linux)
+
 ```bash
 chmod +x run.sh
 ```
 
-### Error en PowerShell: "Execution policy"
+### "Execution policy" (Windows PowerShell)
+
 ```powershell
-# Ejecuta PowerShell como Administrador
+# Ejecuta como Administrador
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### La firma no se ve en el PDF
-- Verifica que `PDF_VISIBLE=true` en tu archivo `.env`
-- Prueba con diferentes perfiles en `signature_profiles.json`
-- Consulta [DEVELOPMENT.md](DEVELOPMENT.md) para ajustar coordenadas
+---
+
+## Verificación
+
+Para comprobar que la firma es visible:
+
+1. Abre el PDF firmado en **Adobe Acrobat Reader**
+2. Ve al panel de firmas (View > Show/Hide > Navigation Panes > Signatures)
+3. Debería mostrar: "Signature1 (firma visible)"
+4. Haz clic en la firma para ver los detalles
 
 ---
 
-## 📚 Documentación Adicional
+## Automatización
 
-- **Configuración Avanzada:** [DEVELOPMENT.md](DEVELOPMENT.md)
-- **Perfiles de Firma:** Edita `signature_profiles.json`
-- **Pruebas:** [../tests/README.md](../tests/README.md)
+### Cron Job (Linux/Mac)
 
----
-
-## 💡 Consejos
-
-### Firma Múltiple de PDFs
-Coloca todos tus PDFs en la carpeta `PDF_INPUT_DIR` y el script los procesará automáticamente.
-
-### Automatización Completa
-- **Windows:** Programa una tarea en el Programador de Tareas
-- **Mac/Linux:** Crea un cron job o usa launchd
-
-Ejemplo de cron (Linux/Mac):
 ```bash
-# Ejecutar cada día a las 9:00 AM
+# Editar crontab
+crontab -e
+
+# Ejecutar todos los días a las 9:00 AM
 0 9 * * * cd /ruta/a/pdf-signature && ./run.sh
 ```
 
-### Integración con CI/CD
-Los scripts son perfectos para integración continua. Configura variables de entorno en tu pipeline y ejecuta directamente.
+### Programador de Tareas (Windows)
+
+1. Abrir Programador de Tareas
+2. Crear tarea básica
+3. Configurar acción: Iniciar programa
+4. Programa: `powershell.exe`
+5. Argumentos: `-File "C:\ruta\pdf-signature\run.ps1"`
 
 ---
 
-## ❓ ¿Necesitas Ayuda?
+## Documentación Adicional
 
-Si encuentras problemas, revisa:
-1. Los logs que muestra el script en la terminal
-2. La [documentación completa](../README.md)
-3. Los [ejemplos de prueba](../tests/README.md)
+- [Guía de Desarrollo](DEVELOPMENT.md) - Configuración avanzada
+- [README principal](../README.md) - Documentación completa
+- [Pruebas](../tests/README.md) - Cómo ejecutar tests

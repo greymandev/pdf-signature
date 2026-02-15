@@ -1,0 +1,58 @@
+{
+  "default": {
+    "page": 1,
+    "rect": {
+      "x": 10,
+      "y": 122,
+      "width": 27,
+      "height": 13
+    },
+    "text": "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$",
+    "color": "black"
+  },
+  "bottom_right": {
+    "page": 1,
+    "rect": {
+      "x": 400,
+      "y": 50,
+      "width": 150,
+      "height": 50
+    },
+    "text": "Firmado por $$SUBJECTCN$$\nFecha: $$SIGNDATE=dd/MM/yyyy$$\nLugar: $$LOCATION$$",
+    "color": "black"
+  },
+  "top_right": {
+    "page": 1,
+    "rect": {
+      "x": 400,
+      "y": 750,
+      "width": 150,
+      "height": 50
+    },
+    "text": "Firmado digitalmente por:\n$$SUBJECTCN$$\n$$SIGNDATE=dd/MM/yyyy HH:mm:ss$$",
+    "color": "blue"
+  },
+  "last_page": {
+    "page": -1,
+    "rect": {
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 60
+    },
+    "text": "Documento firmado electrónicamente\nPor: $$SUBJECTCN$$\nEl día $$SIGNDATE=dd/MM/yyyy$$\nEmisor: $$ISSUERCN$$",
+    "color": "black"
+  },
+  "with_image": {
+    "page": 1,
+    "rect": {
+      "x": 100,
+      "y": 100,
+      "width": 100,
+      "height": 50
+    },
+    "text": "$$SUBJECTCN$$",
+    "color": "black",
+    "image_path": "./assets/signature_stamp.jpg"
+  }
+}

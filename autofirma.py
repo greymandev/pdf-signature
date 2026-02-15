@@ -220,7 +220,9 @@ def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, locati
         else:
             logger.error("Could not detect alias. Signing may fail.")
 
-    cmd = autofirma_cmd + [
+    # Build command as list with real newlines (this is the correct way!)
+    cmd_parts = [
+        "java", "-jar", autofirma_cmd[-1],  # Use the JAR path
         "sign",
         "-i", input_file,
         "-o", output_file,
@@ -230,34 +232,42 @@ def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, locati
     ]
 
     if alias:
-        cmd.extend(["-alias", alias])
+        cmd_parts.extend(["-alias", alias])
     
     # Generate Config
     config_lines = generate_config_lines(visible, location=location, reason=reason, timestamp=timestamp)
     
-    cmd_attempt = list(cmd)
-    
     if config_lines:
-        config_content = "\n".join(config_lines)
-        logger.info(f"[Config] Content:\n{config_content}") 
-        
-        config_base64 = base64.b64encode(config_content.encode('utf-8')).decode('utf-8')
-        cmd_attempt.extend(["-config", config_base64])
+        # Use escaped newlines (\n) like the Windows example - this is the correct way!
+        config_content = "\\n".join(config_lines)
+        logger.info(f"[Config] Content (escaped newlines):\n{config_content[:200]}...")
+        cmd_parts.extend(["-config", config_content])
 
     try:
         logger.info(f"Executing signing command...")
-        result = subprocess.run(cmd_attempt, capture_output=True, text=True, check=False)
+        logger.debug(f"Command: java -jar ... {input_file} ...")  # Debug partial
+        result = subprocess.run(cmd_parts, capture_output=True, text=True, check=False)
         
         output_exists = os.path.exists(output_file)
         
+        # Debug: Log all output
+        if result.stdout:
+            logger.debug(f"Stdout: {result.stdout}")
+        if result.stderr:
+            logger.debug(f"Stderr: {result.stderr}")
+        
         if result.returncode == 0 and output_exists:
             logger.info(f"Successfully signed: {os.path.basename(input_file)}")
-            return True
+            success = True
         else:
-            logger.warning(f"Signing failed. Code: {result.returncode}")
+            logger.error(f"Signing failed. Exit code: {result.returncode}")
             if result.stderr:
-                logger.warning(f"Stderr: {result.stderr[:500]}...") # Log more stderr
-            return False
+                logger.error(f"Stderr: {result.stderr}")
+            if result.stdout:
+                logger.error(f"Stdout: {result.stdout}")
+            success = False
+        
+        return success
             
     except Exception as e:
         logger.error(f"Exception: {e}")
@@ -277,6 +287,13 @@ def main():
     parser.add_argument("-t", "--timestamp", action="store_true", help="Add timestamp to signature")
     parser.add_argument("-a", "--alias", help="Certificate alias (optional, will auto-detect if omitted)")
     
+    # Visible signature coordinates (override .env)
+    parser.add_argument("--sig-x", type=int, help="Signature X coordinate (lower-left)")
+    parser.add_argument("--sig-y", type=int, help="Signature Y coordinate (lower-left)")
+    parser.add_argument("--sig-width", type=int, help="Signature width")
+    parser.add_argument("--sig-height", type=int, help="Signature height")
+    parser.add_argument("--sig-page", type=int, help="Page number for signature (1-based, -1 for last)")
+    
     args = parser.parse_args()
 
     # --- Configuration Resolution (CLI vs Env) ---
@@ -292,6 +309,18 @@ def main():
     visible = args.visible or get_env_bool("PDF_VISIBLE")
     timestamp = args.timestamp or get_env_bool("PDF_TIMESTAMP")
     alias = args.alias or os.environ.get("PDF_ALIAS")
+    
+    # Override .env with CLI arguments if provided
+    if args.sig_x is not None:
+        os.environ["PDF_SIG_RECT_X"] = str(args.sig_x)
+    if args.sig_y is not None:
+        os.environ["PDF_SIG_RECT_Y"] = str(args.sig_y)
+    if args.sig_width is not None:
+        os.environ["PDF_SIG_WIDTH"] = str(args.sig_width)
+    if args.sig_height is not None:
+        os.environ["PDF_SIG_HEIGHT"] = str(args.sig_height)
+    if args.sig_page is not None:
+        os.environ["PDF_SIG_PAGE"] = str(args.sig_page)
     
     # --- Validation ---
     missing_params = []
