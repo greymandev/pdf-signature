@@ -74,6 +74,7 @@ class TestAutofirma(unittest.TestCase):
 
     @patch('subprocess.run')
     def test_sign_pdf_success(self, mock_run):
+        """Test successful PDF signing with native Linux command."""
         # Mock successful execution
         mock_result = MagicMock()
         mock_result.returncode = 0
@@ -82,7 +83,7 @@ class TestAutofirma(unittest.TestCase):
         # Mock output file existence
         with patch('os.path.exists', return_value=True):
             result = autofirma.sign_pdf(
-                autofirma_cmd=["/usr/bin/autofirma"],
+                autofirma_cmd=["/usr/bin/autofirma"],  # Native Linux command
                 input_file="test.pdf",
                 output_file="test-signed.pdf",
                 cert_path="cert.pfx",
@@ -92,7 +93,7 @@ class TestAutofirma(unittest.TestCase):
             
         self.assertTrue(result)
         
-        # Verify command arguments
+        # Verify command arguments for native command
         args = mock_run.call_args[0][0]
         self.assertEqual(args[0], "/usr/bin/autofirma")
         self.assertIn("sign", args)
@@ -101,6 +102,37 @@ class TestAutofirma(unittest.TestCase):
         self.assertIn("pkcs12:cert.pfx", args)
         self.assertIn("-alias", args)
         self.assertIn("myalias", args)
+
+    @patch('subprocess.run')
+    def test_sign_pdf_success_with_jar(self, mock_run):
+        """Test successful PDF signing with JAR command (macOS)."""
+        # Mock successful execution
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+        
+        # Mock output file existence
+        with patch('os.path.exists', return_value=True):
+            result = autofirma.sign_pdf(
+                autofirma_cmd=["java", "-jar", "/Applications/AutoFirma.app/Contents/Resources/JAR/AutoFirma.jar"],
+                input_file="test.pdf",
+                output_file="test-signed.pdf",
+                cert_path="cert.pfx",
+                password="pass",
+                alias="myalias"
+            )
+            
+        self.assertTrue(result)
+        
+        # Verify command arguments for JAR command
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[0], "java")
+        self.assertEqual(args[1], "-jar")
+        self.assertIn("AutoFirma.jar", args[2])
+        self.assertIn("sign", args)
+        self.assertIn("-i", args)
+        self.assertIn("test.pdf", args)
+        self.assertIn("pkcs12:cert.pfx", args)
 
     @patch('subprocess.run')
     def test_sign_pdf_failure(self, mock_run):

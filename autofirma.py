@@ -220,16 +220,31 @@ def sign_pdf(autofirma_cmd, input_file, output_file, cert_path, password, locati
         else:
             logger.error("Could not detect alias. Signing may fail.")
 
-    # Build command as list with real newlines (this is the correct way!)
-    cmd_parts = [
-        "java", "-jar", autofirma_cmd[-1],  # Use the JAR path
-        "sign",
-        "-i", input_file,
-        "-o", output_file,
-        "-store", f"pkcs12:{cert_path}",
-        "-password", password,
-        "-format", "pades"
-    ]
+    # Build command based on autofirma_cmd type
+    # autofirma_cmd can be:
+    #   - ["java", "-jar", "/path/to/jar"] on macOS
+    #   - ["/usr/bin/autofirma"] on Linux
+    #   - ["C:\\...\\AutoFirma.exe"] on Windows
+    if len(autofirma_cmd) == 3 and autofirma_cmd[0] in ["java", "java.exe"]:
+        # JAR-based command (macOS typically)
+        cmd_parts = autofirma_cmd + [
+            "sign",
+            "-i", input_file,
+            "-o", output_file,
+            "-store", f"pkcs12:{cert_path}",
+            "-password", password,
+            "-format", "pades"
+        ]
+    else:
+        # Native command (Linux/Windows)
+        cmd_parts = autofirma_cmd + [
+            "sign",
+            "-i", input_file,
+            "-o", output_file,
+            "-store", f"pkcs12:{cert_path}",
+            "-password", password,
+            "-format", "pades"
+        ]
 
     if alias:
         cmd_parts.extend(["-alias", alias])

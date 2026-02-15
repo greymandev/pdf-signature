@@ -108,14 +108,7 @@ Fecha: $$SIGNDATE=dd/MM/yyyy HH:mm$$
 Entidad: $$ISSUERCN$$"
 ```
 
-### Usar Perfiles Predefinidos
 
-1. Edita `signature_profiles.json` con tus perfiles
-2. Ejecuta con el perfil deseado:
-
-```bash
-python autofirma.py -i ./pdfs -o ./signed -c cert.p12 -p password -v -P bottom_right
-```
 
 ### Ejecución Manual (sin .env)
 
@@ -142,7 +135,7 @@ python autofirma.py \
 2. Comprueba que las coordenadas están dentro de la página
 3. Asegúrate de que width/height sean > 50 puntos
 
-### "Error: No se hay ninguna entrada en el almacen con el alias"
+### "Error: No hay ninguna entrada en el almacén con el alias"
 
 El script detecta automáticamente el alias. Si falla, verifica:
 

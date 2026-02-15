@@ -16,7 +16,6 @@ Este documento detalla la configuración avanzada, estructura y flujo de trabajo
 ```
 pdf-signature/
 ├── autofirma.py              # Script principal (Wrapper de AutoFirma)
-├── signature_profiles.json   # Perfiles de firma predefinidos
 ├── .env                      # Variables de entorno (no versionar)
 ├── .env.template             # Plantilla de variables de entorno
 ├── run.sh                    # Script de ejecución (Mac/Linux)
@@ -38,8 +37,8 @@ pdf-signature/
 ### Flujo de Firma Visible
 
 1. **Generación de Configuración**: El script genera un string de configuración con los parámetros de firma visible
-2. **Escapado para Shell**: La configuración se escapa usando comillas simples para evitar que el shell interprete las variables `$$`
-3. **Ejecución vía Shell**: Se usa `shell=True` en subprocess para que el shell procese los saltos de línea (`\n`) correctamente
+2. **Construcción del Comando**: Se construye una lista de argumentos compatible con ambos tipos de ejecutables de AutoFirma (JAR y nativos)
+3. **Ejecución**: Se ejecuta el comando usando `subprocess.run()` con la lista de argumentos
 4. **Reemplazo de Variables**: AutoFirma reemplaza las variables (`$$SUBJECTCN$$`, `$$SIGNDATE$$`, etc.) con los valores reales del certificado
 
 ### Parámetros de Configuración (AutoFirma)
@@ -73,34 +72,7 @@ AutoFirma reemplaza automáticamente estas variables en el texto:
 - `yyyy-MM-dd HH:mm:ss` → 2026-02-15 14:30:00
 - `dd 'de' MMMM 'de' yyyy` → 15 de febrero de 2026
 
-## Perfiles de Firma
 
-### Estructura del JSON
-
-```json
-{
-  "nombre_perfil": {
-    "page": 1,
-    "rect": {
-      "x": 400,
-      "y": 50,
-      "width": 150,
-      "height": 50
-    },
-    "text": "Texto de la firma con $$VARIABLES$$",
-    "color": "black",
-    "image_path": "./assets/rubrica.jpg"
-  }
-}
-```
-
-### Perfiles Incluidos
-
-- **default**: Esquina inferior izquierda, texto básico
-- **bottom_right**: Esquina inferior derecha, texto extendido
-- **top_right**: Esquina superior derecha, texto azul
-- **last_page**: Última página del documento
-- **with_image**: Incluye imagen de rúbrica
 
 ## Configuración
 
@@ -209,13 +181,17 @@ python -m unittest tests/test_e2e.py
 
 ## Notas Técnicas
 
-### Por qué shell=True
+### Construcción de Comandos
 
-El parámetro `-config` de AutoFirma espera una cadena con saltos de línea literales (`\n`). Al usar `shell=True`, el shell procesa estos caracteres antes de pasarlos a AutoFirma, lo que es necesario para que el formato sea correcto.
+El script detecta automáticamente el tipo de instalación de AutoFirma:
+- **Instalación JAR** (macOS): `["java", "-jar", "/ruta/AutoFirma.jar"]`
+- **Instalación nativa** (Linux/Windows): `["/usr/bin/autofirma"]` o `["C:\\...\\AutoFirma.exe"]`
 
-### Por qué comillas simples
+La función `sign_pdf()` adapta la construcción del comando según el tipo detectado, asegurando compatibilidad multiplataforma.
 
-Las comillas simples (`'...'`) en el shell previenen la expansión de variables (`$$SUBJECTCN$$` → `$SUBJECTCN$$`), permitiendo que AutoFirma las procese correctamente.
+### Variables de Configuración
+
+Las variables con doble `$$` (como `$$SUBJECTCN$$`) son procesadas directamente por AutoFirma. El script las pasa como parte del parámetro `-config` usando caracteres de escape `\\n` para los saltos de línea.
 
 ## Referencias
 

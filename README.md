@@ -6,7 +6,6 @@ Herramienta simple y multiplataforma para firmar documentos PDF masivamente util
 
 - Firma visible y configurable (Posición, texto, macros).
 - Ejecución desatendida desde línea de comandos.
-- Soporte para perfiles de configuración (`signature_profiles.json`).
 - Variables dinámicas en el texto de firma (nombre, fecha, entidad emisora).
 - Compatible con certificados PFX/P12.
 - Soporte multiplataforma (macOS, Windows, Linux).
@@ -118,29 +117,7 @@ El texto de la firma (`PDF_SIG_TEXT`) soporta variables que se reemplazan autom�
 PDF_SIG_TEXT="Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$ con certificado emitido por $$ISSUERCN$$"
 ```
 
-### Perfiles de Firma
 
-Puedes definir perfiles predefinidos en `signature_profiles.json`:
-
-```json
-{
-  "default": {
-    "page": 1,
-    "rect": {
-      "x": 400,
-      "y": 50,
-      "width": 150,
-      "height": 50
-    },
-    "text": "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$"
-  }
-}
-```
-
-Uso con perfil:
-```bash
-python autofirma.py -i ./pdfs -o ./signed -c cert.p12 -p password -v -P default
-```
 
 ## Documentación Adicional
 
@@ -156,7 +133,7 @@ python autofirma.py -i ./pdfs -o ./signed -c cert.p12 -p password -v -P default
 2. Comprueba que las coordenadas no están fuera de la página
 3. Asegúrate de que el tamaño (width/height) sea suficiente (> 50 puntos)
 
-### "Error: No se hay ninguna entrada en el almacen con el alias"
+### "Error: No hay ninguna entrada en el almacén con el alias"
 
 El script detecta automáticamente el alias del certificado. Si falla:
 ```bash
